@@ -253,7 +253,7 @@ def drawWires(wires, intersections, minIntersect, filename='day3_output.txt'):
             buffer.write('\n')
             f.write(buffer.getvalue())
     
-def main():
+def main(draw=False):
 
     with open('day3_input', 'r', encoding='utf-8') as f:
         lines = f.readlines()
@@ -340,11 +340,14 @@ def main():
                         wireRhs['segment_intersections'].setdefault(segmentRhs, []).append({'position': intersection, 'cost': (intersection - segmentRhs.begin).norm(), 'other': segmentLhs})
                         intersections.append(intersection)
     
+    # Part 1
+    
     minIntersect = min(intersections, key=lambda x: x.norm(), default=None)
     
     logging.info(f'Closest intersection: {minIntersect} ({minIntersect.norm()})')
     
-    drawWires(wires, intersections, minIntersect)
+    if (draw):
+        drawWires(wires, intersections, minIntersect)
 
 if __name__=='__main__':
 
@@ -365,6 +368,7 @@ if __name__=='__main__':
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Advent of Code.', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--loglevel', help='Loglevel, one of \'DEBUG\', \'INFO\' (default), \'WARNING\', \'ERROR\'.', type=str, default='INFO')
+    parser.add_argument('--draw', help='Draw output diagram', action='store_true', default=False)
 
     # Parse arguments
     args = parser.parse_args()
@@ -377,4 +381,4 @@ if __name__=='__main__':
     
     l.setLevel(logLevel)
     
-    sys.exit(main())
+    sys.exit(main(draw=args.draw))
