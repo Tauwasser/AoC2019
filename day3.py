@@ -36,6 +36,9 @@ class Vec:
     def __eq__(self, other):
         return (self.x == other.x and self.y == other.y)
     
+    def __hash__(self):
+        return hash((self.x, self.y))
+    
     def __lt__(self, other):
         return (self.x < other.x or self.y < other.y)
     
@@ -44,6 +47,9 @@ class Vec:
     
     def norm(self):
         return abs(self.x) + abs(self.y)
+    
+    def __repr__(self):
+        return f'{self!s} at 0x{id(self):08X}'
     
     def __str__(self):
         return f'{self.__class__.__name__}({self.x}, {self.y})'
@@ -75,6 +81,9 @@ class LineSegment:
         
         return None
     
+    def __repr__(self):
+        return f'{self!s} at 0x{id(self):08X}'
+    
     def __str__(self):
         return f'{self.__class__.__name__}(begin={self.begin!s}, end={self.end!s}, command={vector2command(self.end-self.begin)})'
 
@@ -103,6 +112,9 @@ class BoundingBox:
         yEnd = max(bb.end.y, self.end.y)
         
         return BoundingBox(begin=Vec(xBeg, yBeg), end=Vec(xEnd, yEnd))
+    
+    def __repr__(self):
+        return f'{self!s} at 0x{id(self):08X}'
         
     def __str__(self):
         return f'{self.__class__.__name__}(begin={self.begin}, end={self.end})'
