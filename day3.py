@@ -64,13 +64,19 @@ class LineSegment:
         self.start = min(beg, self.end)
         self.finish = max(beg, self.end)
     
-    def intersect(self, other):
+    def intersect(self, other, sameWire=False):
+        
+        # remove intersection due to touching in start, finish
+        if (sameWire):
+            if (self.finish == other.start \
+                or self.start == other.finish \
+                or self.finish == other.finish \
+                or self.start == other.start):
+                return None
         
         # lines are perpendicular
         # assume lines not parallel, overlap in same direction
-        if   (self.dir != other.dir):
-            
-            #print(f'Checking {self} <-> {other}')
+        if (self.dir != other.dir):
             
             if (other.start.x <= self.start.x <= other.finish.x and self.start.y <= other.start.y <= self.finish.y):
                 # vertical case
@@ -289,21 +295,23 @@ def main():
             
             logging.debug(f'{segment}')
     
+    origin = Vec(0, 0)
     intersections = []
     
     # stupidly intersect everything with everything
-    for lhs in range(0, num_wires):
+    for lhs, wireLhs in enumerate(wires):
         
-        for rhs in range(lhs + 1, num_wires):
+        for rhs, wireRhs in enumerate(wires[lhs + 1:], lhs + 1):
             
-            for segmentLhs in wires[lhs]['segments']:
+            for segmentLhs in wireLhs['segments']:
                 
-                for segmentRhs in wires[rhs]['segments']:
+                for segmentRhs in wireRhs['segments']:
                     
                     intersection = segmentLhs.intersect(segmentRhs)
                     
-                    if (intersection is not None and not (intersection.x == 0 and intersection.y == 0)):
-                        print(f'{segmentLhs} intersects {segmentRhs} at {intersection}')
+                    if (intersection is not None and (intersection != origin)):
+                        wireLhs['segment_intersections'].setdefault(segmentLhs, []).append({'position': intersection, 'cost': (intersection - segmentLhs.begin).norm(), 'other': segmentRhs})
+                        wireRhs['segment_intersections'].setdefault(segmentRhs, []).append({'position': intersection, 'cost': (intersection - segmentRhs.begin).norm(), 'other': segmentLhs})
                         intersections.append(intersection)
     
     minIntersect = min(intersections, key=lambda x: x.norm(), default=None)
