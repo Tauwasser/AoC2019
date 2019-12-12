@@ -2,7 +2,16 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import argparse
+import logging
 from io import StringIO
+
+class MultiLineFormatter(logging.Formatter):
+    def format(self, record):
+        str = logging.Formatter.format(self, record)
+        header, footer = str.split(record.message)
+        str = str.replace('\n', '\n' + ' '*len(header))
+        return str
 
 class Vec:
     
@@ -136,8 +145,6 @@ def drawWires(wires, intersections, minIntersect, filename='day3_output.txt'):
     for wire in wires:
         bb = bb.union(wire['extents'])
     
-    print(bb)
-    
     xOffset = -bb.begin.x
     yOffset = bb.begin.y
     
@@ -244,7 +251,7 @@ def main():
     wire_commands = [[command2vector(x) for x in line.split(',')] for line in lines]
     num_wires = len(wire_commands)
 
-    print(f'Num Wires: {num_wires}')
+    logging.info(f'Num Wires: {num_wires}')
 
     wires = [{'position': Vec(0, 0), 'extents': BoundingBox(), 'segments': []} for _ in range(0, num_wires)]
 
@@ -264,11 +271,11 @@ def main():
     
     for ix, wire in enumerate(wires):
         
-        print(f'Wire {ix} Position {wire["position"]} Extents {wire["extents"]}')
+        logging.debug(f'Wire {ix} Position {wire["position"]} Extents {wire["extents"]}')
         
         for segment in wire['segments']:
             
-            print(f'{segment}')
+            logging.debug(f'{segment}')
     
     intersections = []
     
@@ -289,9 +296,39 @@ def main():
     
     minIntersect = min(intersections, key=lambda x: x.norm(), default=None)
     
-    print(f'Closest intersection: {minIntersect} ({minIntersect.norm()})')
+    logging.info(f'Closest intersection: {minIntersect} ({minIntersect.norm()})')
     
     drawWires(wires, intersections, minIntersect)
 
 if __name__=='__main__':
+
+    logLevelMap = {
+        'debug':   logging.DEBUG,
+        'info':    logging.INFO,
+        'warning': logging.WARNING,
+        'error':   logging.ERROR,
+        }
+    
+    # Set up Logger
+    l = logging.getLogger()
+    h = logging.StreamHandler()
+    h.setFormatter(MultiLineFormatter(fmt='[%(asctime)s][%(levelname)-8s] %(message)s', datefmt='%d %b %Y %H:%M:%S'))
+    l.addHandler(h)
+    l.setLevel(logging.INFO)
+
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Advent of Code.', formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('--loglevel', help='Loglevel, one of \'DEBUG\', \'INFO\' (default), \'WARNING\', \'ERROR\'.', type=str, default='INFO')
+
+    # Parse arguments
+    args = parser.parse_args()
+    
+    # Set User Loglevel
+    logLevel = logLevelMap.get(args.loglevel.lower(), None)
+    if (logLevel is None):
+        logging.error('Invalid loglevel \'{0:s}\' passed. Exiting...'.format(args.loglevel))
+        sys.exit(-1)
+    
+    l.setLevel(logLevel)
+    
     sys.exit(main())
