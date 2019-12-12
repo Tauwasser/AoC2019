@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+from io import StringIO
 
 class Vec:
     
@@ -149,7 +150,7 @@ def drawWires(wires, intersections, minIntersect, filename='day3_output.txt'):
     xSize += 2
     ySize += 2
     
-    field = [[['.'] for _ in range(0, xSize)] for _ in range(0, ySize)]
+    sparseField = {}
     
     def toX(x):
         return x + xOffset
@@ -157,8 +158,23 @@ def drawWires(wires, intersections, minIntersect, filename='day3_output.txt'):
     def toY(y):
         return ySize - y - 1 + yOffset
     
+    hbars = {
+        0: '-',
+        1: '=',
+        2: '═',
+        }
+    vbars = {
+        0: '|',
+        1: '¦',
+        2: '║',
+        }
+    
     # draw lines
-    for wire in wires:
+    for ix, wire in enumerate(wires):
+    
+        hbar = hbars.get(ix, '-')
+        vbar = vbars.get(ix, '|')
+    
         for segment in wire['segments']:
             
             # yBegin/yEnd switched, because .y is cartesian, but yBegin/yEnd is line number
@@ -168,39 +184,42 @@ def drawWires(wires, intersections, minIntersect, filename='day3_output.txt'):
             xEnd = toX(segment.finish.x)
             yEnd = toY(segment.start.y)
             
-            line = '-' if segment.dir == 'h' else '|'
+            line = hbar if segment.dir == 'h' else vbar
             
             # draw line
             for x in range(xBegin, xEnd + 1):
                 for y in range(yBegin, yEnd + 1):
-                    field[y][x] = line
+                    sparseField[(x, y)] = line
             
             # draw begin
-            field[yBegin][xBegin] = '+'
+            sparseField[(xBegin, yBegin)] = '+'
             
             # draw end
-            field[yEnd][xEnd] = '+'
+            sparseField[(xEnd, yEnd)] = '+'
     
     # draw intersection points
     for intersection in intersections:
-        
         x = toX(intersection.x)
         y = toY(intersection.y)
-        field[y][x] = 'x'
+        sparseField[(x, y)] = 'x'
     
     # draw closes intersection point
     if (minIntersect is not None):
         x = toX(minIntersect.x)
         y = toY(minIntersect.y)
-        field[y][x] = 'X'
+        sparseField[(x, y)] = 'X'
     
     # draw origin
-    field[toY(0)][toX(0)] = 'O'
+    sparseField[(toX(0), toY(0))] = 'O'
     
     with open(filename, 'w', encoding='utf-8') as f:
-        for line in field:
-            f.write(''.join(x[0] for x in line))
-            f.write('\n')
+        for y in range(0, ySize):
+            buffer=StringIO()
+            for x in range(0, xSize):
+                char = sparseField.get((x, y), ' ')
+                buffer.write(char)
+            buffer.write('\n')
+            f.write(buffer.getvalue())
     
 def main():
 
