@@ -228,6 +228,13 @@ def drawWires(wires, intersections, minIntersect, filename='day3_output.txt'):
         y = toY(intersection.y)
         sparseField[(x, y)] = 'x'
     
+    # draw self intersection points
+    for wire in wires:
+        for intersection in wire['self_intersections']:
+            x = toX(intersection.x)
+            y = toY(intersection.y)
+            sparseField[(x, y)] = 'S'
+    
     # draw closes intersection point
     if (minIntersect is not None):
         x = toX(minIntersect.x)
@@ -271,7 +278,14 @@ def main():
 
     logging.info(f'Num Wires: {num_wires}')
 
-    wires = [{'position': Vec(0, 0), 'extents': BoundingBox(), 'segments': []} for _ in range(0, num_wires)]
+    wires = [{
+              'position': Vec(0, 0),
+              'extents': BoundingBox(),
+              'segments': [],
+              'segment_intersections': {},
+              'segment_self_intersections': {}
+              }
+             for _ in range(0, num_wires)]
 
     def calcSegment(ix, vec):
         
@@ -286,6 +300,7 @@ def main():
 
     for ix, commands in enumerate(wire_commands):
         wires[ix]['segments'] = [calcSegment(ix, vec) for vec in commands]
+        wires[ix]['segment_self_intersections'] = {}
     
     for ix, wire in enumerate(wires):
         
@@ -298,6 +313,17 @@ def main():
     origin = Vec(0, 0)
     intersections = []
     
+    for wire in wires:
+        self_intersects = []
+        for ixLhs, segmentLhs in enumerate(wire['segments']):
+            for segmentRhs in wire['segments'][ixLhs+1:]:
+                intersection = segmentLhs.intersect(segmentRhs, sameWire=True)
+                if (intersection is not None and (intersection != origin)):
+                    self_intersects.append(intersection)
+                    wire['segment_self_intersections'].setdefault(segmentLhs, []).append({'position': intersection, 'cost': (intersection - segmentLhs.begin).norm(), 'other': segmentRhs})
+                    wire['segment_self_intersections'].setdefault(segmentRhs, []).append({'position': intersection, 'cost': (intersection - segmentRhs.begin).norm(), 'other': segmentLhs})
+        wire['self_intersections'] = self_intersects
+        
     # stupidly intersect everything with everything
     for lhs, wireLhs in enumerate(wires):
         
