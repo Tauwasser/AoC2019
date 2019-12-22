@@ -253,6 +253,93 @@ def drawWires(wires, intersections, minIntersect, filename='day3_output.txt'):
             buffer.write('\n')
             f.write(buffer.getvalue())
     
+def calcWireIntersectCost(wire, intersection):
+    
+    cost = 0
+    begin_cost = 0
+    cost_offset = 0
+    self_intersection_status = {position: {'visited': False, 'cost': 0} for position in wire['self_intersections']}
+    
+    logging.debug('--------------------------')
+    logging.debug(f'{intersection}')
+    
+    for segment in wire['segments']:
+        
+        logging.debug(f'Segment {segment} -- {cost}')
+        begin_cost = cost
+        
+        #for position, attr in self_intersection_status.items():
+        #    logging.debug(f'  {position}: visited {attr["visited"]} cost {attr["cost"]}')
+        
+        # check if intersection reached
+        wireIntersection = next(filter(lambda x: x['position'] == intersection, wire['segment_intersections'].get(segment, [])), None)
+        
+        # check if any self-intersection already visited
+        for self_intersection in wire['segment_self_intersections'].get(segment, []):
+            status = self_intersection_status[self_intersection['position']]
+            
+            if (not status['visited']):
+                continue
+            
+            # additional check if we reached intersection
+            if (wireIntersection is not None):
+                # self intersection must be _after_ wire intersection for shortcut
+                logging.debug(f'Wire intersection w/ self intersection: {wireIntersection["position"]} -- {self_intersection["position"]}\n'
+                              f'on Segment {segment.begin}--{segment.end}')
+                if (segment.begin < segment.end and wireIntersection['position'] < self_intersection['position']):
+                    continue
+                if (segment.begin > segment.end and wireIntersection['position'] > self_intersection['position']):
+                    continue
+                logging.debug(f'Wire intersection after self intersection.')
+            
+            # take better cost of two
+            logging.debug(f'Taking {self_intersection["position"]} cost: {cost} old: {status["cost"]}')
+            if ((cost + self_intersection['cost']) > status['cost']):
+                cost_offset = self_intersection['cost']
+                cost = status['cost']
+            break
+        
+        # mark all current self-intersections visited
+        for self_intersection in wire['segment_self_intersections'].get(segment, []):
+            status = self_intersection_status[self_intersection['position']]
+            # shouldn't matter as no point is visited thrice
+            # but be safe
+            if (status['visited']):
+                continue
+            status['visited'] = True
+            # distinguish between self intersection that is after current self intersection we switched to
+            # and self intersection that is located before current self intersection we switched to
+            # if after: take adjusted cost and add delta of cost from current self intersection to this
+            #           self intersection (which means cost of begin of section to this self intersection minus cost
+            #           from begin of section to current self intersection)
+            # if before: take original cost from begin of section and add cost of begin of section to this
+            #            self intersection that was calculated in main
+            if (self_intersection['cost'] >= cost_offset):
+                status['cost'] = cost + self_intersection['cost'] - cost_offset
+            else:
+                status['cost'] = begin_cost + self_intersection['cost'] 
+            logging.debug(f'Visiting {self_intersection["position"]} cost: {cost} total: {status["cost"]}')
+        
+        # check if we're done
+        if (wireIntersection is not None):
+            cost += wireIntersection['cost'] - cost_offset
+            break
+        
+        
+        # add traveling cost
+        cost += (segment.end - segment.begin).norm() - cost_offset
+        cost_offset = 0
+    
+    logging.debug(f'------------/{cost}/------------')
+    
+    return cost
+    
+def calcIntersectCost(wires, intersection):
+    
+    # find cheapest path for each wire
+    return sum(calcWireIntersectCost(wire, intersection) for wire in wires)
+    
+    
 def main(draw=False):
 
     with open('day3_input', 'r', encoding='utf-8') as f:
@@ -272,6 +359,11 @@ def main(draw=False):
     #lines = ['', '']
     #lines[0] = 'R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51'
     #lines[1] = 'U98,R91,D20,R16,D67,R40,U7,R15,U6,R7'
+    
+    # Custom
+    #lines = ['', '']
+    #lines[0] = 'D1,R2'
+    #lines[1] = 'R3,D2,L2,U3,R3,D2,L2'
     
     wire_commands = [[command2vector(x) for x in line.split(',')] for line in lines]
     num_wires = len(wire_commands)
@@ -316,12 +408,16 @@ def main(draw=False):
     for wire in wires:
         self_intersects = []
         for ixLhs, segmentLhs in enumerate(wire['segments']):
+            logging.info(f'Segment LHS: {segmentLhs}')
             for segmentRhs in wire['segments'][ixLhs+1:]:
+                logging.info(f'  Segment RHS: {segmentRhs}')
                 intersection = segmentLhs.intersect(segmentRhs, sameWire=True)
                 if (intersection is not None and (intersection != origin)):
                     self_intersects.append(intersection)
-                    wire['segment_self_intersections'].setdefault(segmentLhs, []).append({'position': intersection, 'cost': (intersection - segmentLhs.begin).norm(), 'other': segmentRhs})
+                    wire['segment_self_intersections'].setdefault(segmentLhs, []).append({'position': intersection, 'cost': (intersection - segmentLhs.begin).norm(), 'other': segmentLhs})
                     wire['segment_self_intersections'].setdefault(segmentRhs, []).append({'position': intersection, 'cost': (intersection - segmentRhs.begin).norm(), 'other': segmentLhs})
+            for entry, data in wire['segment_self_intersections'].items():
+                logging.info(f'--> {entry}: {data}')
         wire['self_intersections'] = self_intersects
         
     # stupidly intersect everything with everything
@@ -345,6 +441,11 @@ def main(draw=False):
     minIntersect = min(intersections, key=lambda x: x.norm(), default=None)
     
     logging.info(f'Closest intersection: {minIntersect} ({minIntersect.norm()})')
+    
+    # Part 2
+    minStepInterset, steps = min(zip(intersections, map(lambda x: calcIntersectCost(wires, x), intersections)), key=lambda x: x[1], default=None)
+    
+    logging.info(f'Cheapest intersection: {minStepInterset} ({steps})')
     
     if (draw):
         drawWires(wires, intersections, minIntersect)
