@@ -69,33 +69,35 @@ class IntcodeComputer:
         asyncio.set_event_loop(loop)
         
         # create queues
-        self._inputs = asyncio.Queue()
-        self._outputs = asyncio.Queue()
+        inQueue = asyncio.Queue()
+        outQueue = asyncio.Queue()
         
         # pre-populate queue
         for input in inputs:
-            self._inputs.put_nowait(input)
+            inQueue.put_nowait(input)
         
-        trace = loop.run_until_complete(self.async_compute(program, pos))
+        trace = loop.run_until_complete(self.async_compute(program, inQueue, outQueue, pos=pos))
         
         # gather outputs
         outputs = []
         
-        while not(self._outputs.empty()):
-            outputs.append(self._outputs.get_nowait())
+        while not(outQueue.empty()):
+            outputs.append(outQueue.get_nowait())
         
         asyncio.set_event_loop(None)
         loop.close()
         
         return outputs, trace
     
-    async def async_compute(self, program, pos=0):
+    async def async_compute(self, program, inQueue, outQueue, pos=0):
         
         instructions = []
         
         self._program = program
         self._position = pos
         self._size = len(program)
+        self._inputs = inQueue
+        self._outputs = outQueue
         
         Instruction = IntcodeComputer.Instruction
         
