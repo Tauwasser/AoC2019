@@ -40,8 +40,8 @@ def main():
     for line in lines:
         
         lhs, rhs = line.strip().split(')')
-        orbitMap.setdefault(rhs, {'orbits': None, 'orbited': [], 'checksum': -1})['orbits'] = lhs
-        orbitMap.setdefault(lhs, {'orbits': None, 'orbited': [], 'checksum': -1})['orbited'].append(rhs)
+        orbitMap.setdefault(rhs, {'orbits': None, 'orbited': [], 'checksum': -1, 'visited': False})['orbits'] = lhs
+        orbitMap.setdefault(lhs, {'orbits': None, 'orbited': [], 'checksum': -1, 'visited': False})['orbited'].append(rhs)
     
     # compute direct, indirect orbits
     def calcChecksum(parent, node):
@@ -64,6 +64,45 @@ def main():
     logging.info(f'Orbit Checksum: {count}')
     
     # Part 2
+    
+    # find objects YOU and SAN are orbiting
+    youObj = orbitMap['YOU']['orbits']
+    sanObj = orbitMap['SAN']['orbits']
+    
+    # idea: find commonly orbited object (OBJ) and calc paths from there
+    
+    youPath = []
+    curObj = youObj
+    
+    while (curObj != 'COM'):
+        youPath.append(curObj)
+        entry = orbitMap[curObj]
+        
+        entry['visited'] = True
+        curObj = entry['orbits']
+    
+    sanPath = []
+    curObj = sanObj
+    
+    while (curObj != 'COM'):
+        
+        sanPath.append(curObj)
+        entry = orbitMap[curObj]
+        
+        if (entry['visited']):
+            break
+        curObj = entry['orbits']
+    
+    obj = sanPath[-1]
+    logging.info(f'First Common Object: {obj}')
+    
+    # index is number of objects from youObj to obj (inclusive)
+    ix = youPath.index(obj)
+    
+    # length of sanPath is number of objects from sanObj to obj (inclusive)
+    # therefore number of orbital transfers is number of objects from youObj to obj + sanObj to obj - 1
+    logging.info(f'Number of required orbital transfers: {ix+len(sanPath) - 1}')
+    
     return 0
     
 if __name__=='__main__':
