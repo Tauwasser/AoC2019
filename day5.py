@@ -14,13 +14,12 @@ class MultiLineFormatter(logging.Formatter):
         str = str.replace('\n', '\n' + ' '*len(header))
         return str
 
-def main(draw=False):
+def main(input):
 
     with open('day5_input', 'r', encoding='utf-8') as f:
         numbers = f.readlines()
     
     program = ''.join(numbers)
-    #program = '3,0,4,0,99'
     program = [int(x) for x in program.split(',')]
     
     computer = IntcodeComputer()
@@ -29,11 +28,13 @@ def main(draw=False):
     
     # Part 1
     
-    trace = computer.compute(program, input=1)
-    
+    trace = computer.compute(program, input=(input or 1))
     print('\n'.join(str(x) for x in trace))
     
     # Part 2
+    program = original_program[:]
+    trace = computer.compute(program, input=(input or 5))
+    print('\n'.join(str(x) for x in trace))
     
     return 0
     
@@ -56,6 +57,7 @@ if __name__=='__main__':
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Advent of Code.', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--loglevel', help='Loglevel, one of \'DEBUG\', \'INFO\' (default), \'WARNING\', \'ERROR\'.', type=str, default='INFO')
+    parser.add_argument('--input', type=int, help='IntCode Input', default=None)
 
     # Parse arguments
     args = parser.parse_args()
@@ -68,4 +70,4 @@ if __name__=='__main__':
     
     l.setLevel(logLevel)
     
-    sys.exit(main())
+    sys.exit(main(args.input))

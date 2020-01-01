@@ -85,15 +85,15 @@ class IntcodeComputer:
         
         while (self._position < self._size):
             
-            code = program[self._position] % 100
-            mode = program[self._position] // 100
+            position = self._position
+            code = program[position] % 100
+            mode = program[position] // 100
             opcode = opcodeMap.get(code, None)
             
             if (opcode is None):
-                raise RuntimeError(f'Program reached invalid opcode {program[self._position]} at position {self._position}.\n{chr(10).join(str(x) for x in instructions)}')
+                raise RuntimeError(f'Program reached invalid opcode {program[position]} at position {position}.\n{chr(10).join(str(x) for x in instructions)}')
             
-            position = self._position
-            arg = self.getParameters(self._position + 1, mode, opcode['args'])
+            arg = self.getParameters(position + 1, mode, opcode['args'])
             f = opcode['fun'] or self._nop
             branch, trace = f(arg)
             logging.debug(Instruction(position, code, mode, opcode['name'], trace))
