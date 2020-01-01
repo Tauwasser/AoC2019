@@ -5,6 +5,7 @@ import sys
 import argparse
 import logging
 from io import StringIO
+from timeit import default_timer as timer
 
 class MultiLineFormatter(logging.Formatter):
     def format(self, record):
@@ -365,10 +366,14 @@ def main(draw=False):
     #lines[0] = 'D1,R2'
     #lines[1] = 'R3,D2,L2,U3,R3,D2,L2'
     
+    start = timer()
+    
     wire_commands = [[command2vector(x) for x in line.split(',')] for line in lines]
     num_wires = len(wire_commands)
+    end = timer()
 
     logging.info(f'Num Wires: {num_wires}')
+    logging.error(f'Parsing: {end-start:g}s')
 
     wires = [{
               'position': Vec(0, 0),
@@ -405,6 +410,8 @@ def main(draw=False):
     origin = Vec(0, 0)
     intersections = []
     
+    start = timer()
+    
     for wire in wires:
         self_intersects = []
         for ixLhs, segmentLhs in enumerate(wire['segments']):
@@ -420,6 +427,10 @@ def main(draw=False):
                 logging.info(f'--> {entry}: {data}')
         wire['self_intersections'] = self_intersects
         
+    end = timer()
+    logging.error(f'Self intersects: {end-start:g}s')
+    
+    start = timer()
     # stupidly intersect everything with everything
     for lhs, wireLhs in enumerate(wires):
         
@@ -436,16 +447,25 @@ def main(draw=False):
                         wireRhs['segment_intersections'].setdefault(segmentRhs, []).append({'position': intersection, 'cost': (intersection - segmentRhs.begin).norm(), 'other': segmentLhs})
                         intersections.append(intersection)
     
+    end = timer()
+    logging.error(f'Wire intersects: {end-start:g}s')
+    
     # Part 1
     
+    start=timer()
     minIntersect = min(intersections, key=lambda x: x.norm(), default=None)
+    end = timer()
     
     logging.info(f'Closest intersection: {minIntersect} ({minIntersect.norm()})')
+    logging.error(f'Part 1: {end-start:g}s')
     
     # Part 2
+    start=timer()
     minStepInterset, steps = min(zip(intersections, map(lambda x: calcIntersectCost(wires, x), intersections)), key=lambda x: x[1], default=None)
+    end = timer()
     
     logging.info(f'Cheapest intersection: {minStepInterset} ({steps})')
+    logging.error(f'Part 2: {end-start:g}s')
     
     if (draw):
         drawWires(wires, intersections, minIntersect)
