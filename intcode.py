@@ -49,32 +49,40 @@ class IntcodeComputer:
         position = self._position
         Instruction = IntcodeComputer.Instruction
         
+        opcodeMap = {
+             1: {'name': 'add', 'args': 3, 'fun': self._add},
+             2: {'name': 'multiply', 'args': 3, 'fun': self._multiply},
+            99: {'name': 'halt', 'args': 0, 'fun': None},
+            }
+        
         while (position < self._size):
-            if (program[position] == 1):
-                # add
-                arg = self.getParameters(position + 1, 3)
-                
-                result = arg[0].value + arg[1].value
-                operation = f'{arg[0]} + {arg[1]} = {result} -> {arg[2]}'
-                instructions.append(Instruction(position, program[position], 'add', operation))
-                program[arg[2].position] = result
-                position += 4
-                
-            elif (program[position] == 2):
-                # multiply
-                arg = self.getParameters(position + 1, 3)
-                
-                result = arg[0].value * arg[1].value
-                operation = f'{arg[0]} * {arg[1]} = {result} -> {arg[2]}'
-                instructions.append(Instruction(position, program[position], 'multiply', operation))
-                program[arg[2].position] = result
-                position += 4
-                
-            elif (program[position] == 99):
-                instructions.append(Instruction(position, program[position], 'return', ''))
-                position += 1
-                break
-            else:
+        
+            opcode = opcodeMap.get(program[position], None)
+            
+            if (opcode is None):
                 raise RuntimeError(f'Program reached invalid opcode {program[position]} at position {position}.\n{chr(10).join(str(x) for x in instructions)}')
+            
+            arg = self.getParameters(position + 1, opcode['args'])
+            f = opcode['fun'] or self._nop
+            instructions.append(Instruction(position, program[position], opcode['name'], f(arg)))
+            position += 1 + opcode['args']
+            
+            if (opcode['fun'] is None):
+                break
         
         return instructions
+    
+    def _nop(self, arg):
+        return ''
+    
+    def _add(self, arg):
+        
+        result = arg[0].value + arg[1].value
+        self._program[arg[2].position] = result
+        return f'{arg[0]} + {arg[1]} = {result} -> {arg[2]}'
+    
+    def _multiply(self, arg):
+        
+        result = arg[0].value * arg[1].value
+        self._program[arg[2].position] = result
+        return f'{arg[0]} * {arg[1]} = {result} -> {arg[2]}'
