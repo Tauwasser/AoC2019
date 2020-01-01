@@ -295,9 +295,11 @@ def calcWireIntersectCost(wire, intersection):
             
             # take better cost of two
             logging.debug(f'Taking {self_intersection["position"]} cost: {cost} old: {status["cost"]}')
-            if ((cost + self_intersection['cost']) > status['cost']):
-                cost_offset = self_intersection['cost']
-                cost = status['cost']
+            if (intersection == Vec(562, -5065)):
+                logging.error(f'Taking {self_intersection["position"]} cost: {cost} old: {status["cost"]}')
+            #if ((cost + self_intersection['cost']) > status['cost']):
+            #    cost_offset = self_intersection['cost']
+            #    cost = status['cost']
             break
         
         # mark all current self-intersections visited
@@ -329,6 +331,8 @@ def calcWireIntersectCost(wire, intersection):
         
         # add traveling cost
         cost += (segment.end - segment.begin).norm() - cost_offset
+        if (intersection == Vec(562, -5065)):
+            logging.error(f'Cost: {cost} Offset: {cost_offset}')
         cost_offset = 0
     
     logging.debug(f'------------/{cost}/------------')
@@ -464,7 +468,7 @@ def main(draw=False):
     minStepInterset, steps = min(zip(intersections, map(lambda x: calcIntersectCost(wires, x), intersections)), key=lambda x: x[1], default=None)
     end = timer()
     
-    logging.info(f'Cheapest intersection: {minStepInterset} ({steps})')
+    logging.error(f'Cheapest intersection: {minStepInterset} ({steps})')
     logging.error(f'Part 2: {end-start:g}s')
     
     if (draw):
