@@ -63,7 +63,7 @@ def monotonousDigits(num):
         
     return True
 
-def main(draw=False):
+def main():
 
     with open('day4_input', 'r', encoding='utf-8') as f:
         lines = f.readlines()
