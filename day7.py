@@ -35,12 +35,13 @@ def main():
     for permutation in permutations([0, 1, 2, 3, 4]):
         
         input = 0
-        logging.info('---------')
+        logging.debug('---------')
         for phase in permutation:
     
             outputs, trace = computer.compute(program, inputs=[phase, input])
             # collect output
             input = outputs[-1]
+            logging.debug(f'Output: {outputs[-1]}')
             # restore program
             program = original_program[:]
         
@@ -48,7 +49,7 @@ def main():
             maxThrust = outputs[-1]
             maxThrustPermutation = permutation
     
-    logging.info(f'Max Thrust {maxThrust} for permutation {maxThrustPermutation}')
+    logging.info(f'Pt 1: Max Thrust {maxThrust} for permutation {maxThrustPermutation}')
     
     # Part 2
     return 0

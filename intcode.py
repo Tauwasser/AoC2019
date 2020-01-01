@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import asyncio
+
 import logging
 
 class IntcodeComputer:
@@ -60,15 +62,40 @@ class IntcodeComputer:
         
         return args
     
-    def compute(self, program, pos=0, inputs=[0]):
+    def compute(self, program, pos=0, inputs=[]):
+        
+        # create event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # create queues
+        self._inputs = asyncio.Queue()
+        self._outputs = asyncio.Queue()
+        
+        # pre-populate queue
+        for input in inputs:
+            self._inputs.put_nowait(input)
+        
+        trace = loop.run_until_complete(self.async_compute(program, pos))
+        
+        # gather outputs
+        outputs = []
+        
+        while not(self._outputs.empty()):
+            outputs.append(self._outputs.get_nowait())
+        
+        asyncio.set_event_loop(None)
+        loop.close()
+        
+        return outputs, trace
+    
+    async def async_compute(self, program, pos=0):
         
         instructions = []
         
         self._program = program
         self._position = pos
         self._size = len(program)
-        self._inputs = inputs
-        self._outputs = []
         
         Instruction = IntcodeComputer.Instruction
         
@@ -76,7 +103,7 @@ class IntcodeComputer:
              1: {'name': 'add', 'args': 3, 'fun': self._add},
              2: {'name': 'multiply', 'args': 3, 'fun': self._multiply},
              3: {'name': 'store', 'args': 1, 'fun': self._storeInput},
-             4: {'name': 'output', 'args': 1, 'fun': self._printValue},
+             4: {'name': 'output', 'args': 1, 'fun': self._outputValue},
              5: {'name': 'btru', 'args': 2, 'fun': self._branchTrue, 'branch': True},
              6: {'name': 'bfal', 'args': 2, 'fun': self._branchFalse, 'branch': True},
              7: {'name': 'lt', 'args': 3, 'fun': self._lessThan},
@@ -96,7 +123,7 @@ class IntcodeComputer:
             
             arg = self.getParameters(position + 1, mode, opcode['args'])
             f = opcode['fun'] or self._nop
-            branch, trace = f(arg)
+            branch, trace = await f(arg)
             logging.debug(Instruction(position, code, mode, opcode['name'], trace))
             instructions.append(Instruction(position, code, mode, opcode['name'], trace))
             if (not branch):
@@ -105,37 +132,36 @@ class IntcodeComputer:
             if (opcode['fun'] is None):
                 break
         
-        return self._outputs, instructions
+        return instructions
     
-    def _nop(self, arg):
+    async def _nop(self, arg):
         return False, ''
     
-    def _add(self, arg):
+    async def _add(self, arg):
         
         result = arg[0].value + arg[1].value
         self._program[arg[2].position] = result
         return False, f'{arg[0]} + {arg[1]} = {result} -> {arg[2]}'
     
-    def _multiply(self, arg):
+    async def _multiply(self, arg):
         
         result = arg[0].value * arg[1].value
         self._program[arg[2].position] = result
         return False, f'{arg[0]} * {arg[1]} = {result} -> {arg[2]}'
     
-    def _storeInput(self, arg):
+    async def _storeInput(self, arg):
         
-        input = self._inputs.pop(0)
+        input = await self._inputs.get()
         
         self._program[arg[0].position] = input
         return False, f'!{input} -> {arg[0]}'
     
-    def _printValue(self, arg):
+    async def _outputValue(self, arg):
         
-        logging.info(f'Print: {arg[0].value}')
-        self._outputs.append(arg[0].value)
+        await self._outputs.put(arg[0].value)
         return False, f'{arg[0]}'
     
-    def _branchTrue(self, arg):
+    async def _branchTrue(self, arg):
         
         trace = f'{arg[0]} != 0 --> {arg[1]}'
         
@@ -145,7 +171,7 @@ class IntcodeComputer:
         
         return False, trace
     
-    def _branchFalse(self, arg):
+    async def _branchFalse(self, arg):
     
         trace = f'{arg[0]} == 0 --> {arg[1]}'
         
@@ -155,13 +181,13 @@ class IntcodeComputer:
         
         return False, trace
     
-    def _lessThan(self, arg):
+    async def _lessThan(self, arg):
         
         result = 1 if arg[0].value < arg[1].value else 0
         self._program[arg[2].position] = result
         return False, f'{arg[0]} < {arg[1]} = {result} -> {arg[2]}'
     
-    def _equals(self, arg):
+    async def _equals(self, arg):
         
         result = 1 if arg[0].value == arg[1].value else 0
         self._program[arg[2].position] = result

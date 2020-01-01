@@ -28,13 +28,17 @@ def main(input):
     
     # Part 1
     
-    _, trace = computer.compute(program, inputs=[input or 1])
-    print('\n'.join(str(x) for x in trace))
+    outputs, trace = computer.compute(program, inputs=[input or 1])
+    
+    logging.debug('\n'.join(str(x) for x in ['Pt 1 Trace:'] + trace))
+    logging.info(f'Pt 1 Output: {outputs[-1]}')
     
     # Part 2
     program = original_program[:]
-    _, trace = computer.compute(program, inputs=[input or 5])
-    print('\n'.join(str(x) for x in trace))
+    outputs, trace = computer.compute(program, inputs=[input or 5])
+    
+    logging.debug('\n'.join(str(x) for x in ['Pt 2 Trace:'] + trace))
+    logging.info(f'Pt 2 Output: {outputs[-1]}')
     
     return 0
     
