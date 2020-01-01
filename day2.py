@@ -17,7 +17,7 @@ computer = IntcodeComputer()
 
 original_program = program[:]
 
-trace = computer.compute(program)
+_, trace = computer.compute(program)
 
 print('\n'.join(str(x) for x in trace))
 

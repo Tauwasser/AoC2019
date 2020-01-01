@@ -28,12 +28,12 @@ def main(input):
     
     # Part 1
     
-    trace = computer.compute(program, input=(input or 1))
+    _, trace = computer.compute(program, inputs=[input or 1])
     print('\n'.join(str(x) for x in trace))
     
     # Part 2
     program = original_program[:]
-    trace = computer.compute(program, input=(input or 5))
+    _, trace = computer.compute(program, inputs=[input or 5])
     print('\n'.join(str(x) for x in trace))
     
     return 0

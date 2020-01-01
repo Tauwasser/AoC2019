@@ -60,14 +60,15 @@ class IntcodeComputer:
         
         return args
     
-    def compute(self, program, pos=0, input=0):
+    def compute(self, program, pos=0, inputs=[0]):
         
         instructions = []
         
         self._program = program
         self._position = pos
         self._size = len(program)
-        self._input = input
+        self._inputs = inputs
+        self._outputs = []
         
         Instruction = IntcodeComputer.Instruction
         
@@ -104,7 +105,7 @@ class IntcodeComputer:
             if (opcode['fun'] is None):
                 break
         
-        return instructions
+        return self._outputs, instructions
     
     def _nop(self, arg):
         return False, ''
@@ -123,12 +124,15 @@ class IntcodeComputer:
     
     def _storeInput(self, arg):
         
-        self._program[arg[0].position] = self._input
-        return False, f'!{self._input} -> {arg[0]}'
+        input = self._inputs.pop(0)
+        
+        self._program[arg[0].position] = input
+        return False, f'!{input} -> {arg[0]}'
     
     def _printValue(self, arg):
         
         logging.info(f'Print: {arg[0].value}')
+        self._outputs.append(arg[0].value)
         return False, f'{arg[0]}'
     
     def _branchTrue(self, arg):
