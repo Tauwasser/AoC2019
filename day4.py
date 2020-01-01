@@ -28,6 +28,27 @@ def twoAdjacentDigitsSame(num):
     
     return False
 
+def atLeastExactlyTwoAdjacentDigitsSame(num):
+    
+    lastDigit = None
+    count = 1
+    countBuckets = []
+    
+    fmt = f'{{num:0{PASSWORD_DIGITS}d}}!'
+    str = fmt.format(num=num)
+    
+    for digit in str:
+        
+        if (lastDigit == digit):
+            count += 1
+        
+        if (lastDigit != digit and lastDigit is not None):
+            countBuckets.append(count)
+            count = 1
+        lastDigit = digit
+    
+    return 2 in countBuckets
+
 def monotonousDigits(num):
     
     lastDigit = -1
@@ -62,7 +83,23 @@ def main(draw=False):
             continue
         count += 1
     
-    logging.info(f'Number of passwords matching criteria: {count}')
+    logging.info(f'Number of passwords matching criteria Pt 1: {count}')
+    
+    # Part 2
+    
+    count = 0
+    for number in range(low, high + 1):
+        
+        if not(twoAdjacentDigitsSame(number)):
+            continue
+        if not(monotonousDigits(number)):
+            continue
+        if not(atLeastExactlyTwoAdjacentDigitsSame(number)):
+            continue
+        count += 1
+    
+    logging.info(f'Number of passwords matching criteria Pt 2: {count}')
+    return 0
     
 if __name__=='__main__':
 
