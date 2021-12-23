@@ -119,14 +119,35 @@ def part1(numbers, boards) -> Tuple[int, int]:
     return 0, -1
 
 def part2(numbers, boards):
-    pass
+    
+    num_not_won = len(boards)
+    
+    # draw a number
+    for number in numbers:
+        
+        # mark number on all boards
+        # and check if any board won
+        for ix, board in enumerate(boards, 1):
+            # do not count won boards twice
+            if (board.won()):
+                continue
+            # mark and check as usual
+            board.mark(number)
+            if (board.won()):
+                num_not_won -= 1
+                if (num_not_won == 0):
+                    # but only report score if last board to win
+                    return board.score() * number, ix
+    
+    return 0, -1
     
 def main(args):
     
     numbers, boards = read_inputs(args.example)
     final_score, board_ix = part1(numbers[::], copy.deepcopy(boards))
     logging.info(f'Part 1: Final Score {final_score} with board {board_ix}.')
-    part2(numbers[::], copy.deepcopy(boards))
+    final_score, board_ix = part2(numbers[::], copy.deepcopy(boards))
+    logging.info(f'Part 2: Final Score {final_score} with board {board_ix}.')
 
 if __name__ == '__main__':
     args = setup()
