@@ -7,10 +7,30 @@ import math
 
 from lib import setup
 
-def read_inputs():
-    with open('day3_input', 'r', encoding='utf-8') as f:
-        diagnostics = [int(v, 2) for v in f.read().splitlines()]
-    return diagnostics
+example_input = """
+00100
+11110
+10110
+10111
+10101
+01111
+00111
+11100
+10000
+11001
+00010
+01010
+"""
+
+def read_inputs(example=False):
+
+    if (example):
+        data = example_input
+    else:
+        with open('day3_input', 'r', encoding='utf-8') as f:
+            data = f.read()
+    
+    return [int(v, 2) for v in data.splitlines() if v]
 
 def part1(diagnostics):
     
@@ -36,12 +56,12 @@ def part1(diagnostics):
 def part2(diagnostics):
     pass
 
-def main():
+def main(args):
     
-    diagnostics = read_inputs()
+    diagnostics = read_inputs(args.example)
     part1(diagnostics[::])
     part2(diagnostics[::])
 
 if __name__ == '__main__':
-    setup()
-    sys.exit(main())
+    args = setup()
+    sys.exit(main(args))

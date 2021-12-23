@@ -19,7 +19,7 @@ class MultiLineFormatter(logging.Formatter):
         str = str.replace('\n', '\n' + ' '*len(header))
         return str
 
-def setup(install_arguments: Callable[[argparse.ArgumentParser], None] = None):
+def setup(install_arguments: Callable[[argparse.ArgumentParser], None] = None) -> argparse.Namespace:
     # Set up Logger
     l = logging.getLogger()
     h = logging.StreamHandler()
@@ -37,6 +37,7 @@ def setup(install_arguments: Callable[[argparse.ArgumentParser], None] = None):
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Advent of Code.', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--loglevel', help='Loglevel, one of \'DEBUG\', \'INFO\' (default), \'WARNING\', \'ERROR\'.', type=str, default='INFO')
+    parser.add_argument('--example', help='Use example data.', action='store_true', default=False)
     if (install_arguments is not None):
         install_arguments(parser)
 
@@ -54,3 +55,4 @@ def setup(install_arguments: Callable[[argparse.ArgumentParser], None] = None):
         sys.exit(-1)
     
     l.setLevel(logLevel)
+    return args
