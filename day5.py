@@ -44,6 +44,17 @@ class Point:
             return Point(self.x / other, self.y / other)
         return NotImplemented
     
+    def _intdivide(self, other: Union[int, float]) -> 'Point':
+        if (isinstance(other, (int, float))):
+            return Point(self.x // other, self.y // other)
+        return NotImplemented
+    
+    def __floordiv__(self, other: Union[int, float]) -> 'Point':
+        return self._intdivide(other)
+    
+    def __rfloordiv__(self, other: Union[int, float]) -> 'Point':
+        return self._intdivide(other)
+    
     def __truediv__(self, other: Union[int, float]) -> 'Point':
         return self._divide(other)
     
@@ -114,16 +125,11 @@ class Line:
         # return self.start + t * vec_lhs w/ t := det([(C - A) -(D - C)]) / det([(B - A) -(D - C)])
         return self.start + det(other.start - self.start, -vec_rhs) * vec_lhs / divisor
     
-    def overlap(self, other: 'Line') -> List[Point]:
+    def overlap(self, other: 'Line', diagonals=False) -> List[Point]:
         
         results = []
         
-        if (self.horizontal and other.vertical or self.vertical and other.horizontal):
-            # exactly one or zero points
-            pt = self.intersect(other)
-            if (pt is not None):
-                results.append(pt)
-        elif (self.horizontal and other.horizontal):
+        if (self.horizontal and other.horizontal):
             # zero or more points
             if (self.start.y == other.start.y):
                 for x in range(max(self.start.x, other.start.x), min(self.end.x, other.end.x) + 1):
@@ -134,6 +140,33 @@ class Line:
                 for y in range(max(self.start.y, other.start.y), min(self.end.y, other.end.y) + 1):
                     results.append(Point(self.start.x, y))
         
+        if (diagonals and (self.diagonal and other.diagonal)):
+            # normalize vectors (should be either 1/1 or 1/-1)
+            vec_lhs = self.end - self.start
+            vec_rhs = other.end - other.start
+            vec_lhs = vec_lhs / abs(vec_lhs.y)
+            vec_rhs = vec_rhs / abs(vec_rhs.y)
+            if (vec_lhs == vec_rhs):
+                # make sure lines have the same y intercept
+                # and actually overlap (instead of one ending before the other starts)
+                yint_lhs = self.start - self.start.x * vec_lhs
+                yint_rhs = other.start - other.start.x * vec_rhs
+                if (yint_lhs == yint_rhs and ((self.start <= other.start <= self.end) or (other.start <= self.start <= other.end))):
+                    # lines are the same
+                    start = max(self.start, other.start)
+                    end = min(self.end, other.end)
+                    pt = start
+                    while (pt <= end):
+                        results.append(pt)
+                        pt = pt + vec_lhs
+        
+        if (diagonals or (self.horizontal and other.vertical) or (self.vertical and other.horizontal)):
+            # exactly one or zero points
+            pt = self.intersect(other)
+            # make sure points are on the grid
+            if (pt is not None and (pt // 1) == pt):
+                results.append(pt)
+        
         return results
     
     @property
@@ -143,6 +176,11 @@ class Line:
     @property
     def vertical(self):
         return self.start.x == self.end.x
+    
+    @property
+    def diagonal(self):
+        # lines are guaranteed to be either horizontals, verticals or (45°) diagonals
+        return not self.horizontal and not self.vertical
 
 def read_inputs(example=False) -> List[Line]:
     
@@ -164,33 +202,33 @@ def read_inputs(example=False) -> List[Line]:
     
     return lines
 
-def part1(lines: List[Line]):
+def part1(lines: List[Line], diagonals=False):
     
     overlaps : Dict[Point, int] = defaultdict(lambda: 0)
     
     # find line intersecs
     for ix, lhs in enumerate(lines):
         for rhs in lines[ix+1:]:
-            pts = lhs.overlap(rhs)
-            if (not pts):
-                continue
-            if (len(pts) > 20):
-                logging.debug(f'{lhs} produced {len(pts)} overlaps with {rhs}')
+            pts = lhs.overlap(rhs, diagonals=diagonals)
             for pt in pts:
                 overlaps[pt] += 1
     
     return overlaps
 
 def part2(lines: List[Line]):
-    pass
+    return part1(lines, diagonals=True)
 
 def main(args):
     
     lines = read_inputs(args.example)
     overlaps = part1(lines)
     logging.info(f'Part 1: Found {len(overlaps)} overlaps total.')
-    part2(lines)
-    logging.info(f'Part 2: ')
+    overlaps = part2(lines)
+    logging.info(f'Part 2: Found {len(overlaps)} overlaps total (including diagonals)')
+    
+    with open('day5_debug', 'w', encoding='utf-8') as f:
+        for overlap in sorted(overlaps):
+            f.write(f'{overlap.x},{overlap.y}\n')
 
 if __name__ == '__main__':
     args = setup()
