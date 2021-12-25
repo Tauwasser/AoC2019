@@ -3,6 +3,7 @@
 
 import sys
 import logging
+import math
 
 from typing import List, Tuple
 
@@ -35,16 +36,37 @@ def part1(crab_positions: List[int]) -> Tuple[int, int]:
     
     return fuel, median_pos
 
-def part2(crab_positions: List[int]):
-    pass
+def part2(crab_positions: List[int]) -> Tuple[int, int]:
+    
+    def cost(steps):
+        return steps * (steps + 1) / 2
+    
+    min_pos = min(crab_positions)
+    max_pos = max(crab_positions)
+    result_pos = None
+    result_fuel = math.inf
+    
+    # sweep through all possible positions and determine total cost to move all crabs
+    for pos in range(min_pos, max_pos + 1):
+        fuel = 0
+        for crab in crab_positions:
+            fuel += cost(abs(crab - pos))
+            # maybe optimize
+            if (fuel > result_fuel):
+                break;
+        if (fuel < result_fuel):
+            result_fuel = fuel
+            result_pos = pos
+    
+    return result_fuel, result_pos
 
 def main(args):
     
     crab_positions = read_inputs(args.example)
     fuel, pos = part1(crab_positions[:])
     logging.info(f'Part 1: Need {fuel} fuel to move all crabs to {pos}.')
-    part2(crab_positions[:])
-    logging.info(f'Part 2: ')
+    fuel, pos = part2(crab_positions[:])
+    logging.info(f'Part 2: Need {fuel} fuel to move all crabs to {pos}.')
 
 if __name__ == '__main__':
     args = setup()
