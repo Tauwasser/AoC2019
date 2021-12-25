@@ -46,18 +46,18 @@ def part1(fish: Dict[int, int], days=80):
         logging.debug(f'After {day} day(s) there are {sum(fish.values())} fish.')
         logging.debug(f'Fish: {fish}')
 
-def part2(fish: Dict[int, int]):
-    pass
+def part2(fish: Dict[int, int], days=256):
+    return part1(fish, days=days)
 
 def main(args):
     
     fish = read_inputs(args.example)
     fish_pt1 = {**fish}
     fish_pt2 = {**fish}
-    part1(fish_pt1)
+    part1(fish_pt1, days=80)
     logging.info(f'Part 1: After 80 days there are {sum(fish_pt1.values())} fish.')
-    part2(fish_pt2)
-    logging.info(f'Part 2: ')
+    part2(fish_pt2, days=256)
+    logging.info(f'Part 2: After 80 days there are {sum(fish_pt2.values())} fish.')
 
 if __name__ == '__main__':
     args = setup()
