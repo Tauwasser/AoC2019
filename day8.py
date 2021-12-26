@@ -198,17 +198,14 @@ def part1(entries: List[Entry]) -> List[int]:
     
     return decoded_entries
 
-def part2():
-    pass
-
 def main(args):
     
     entries = read_inputs(args.example)
     decoded = part1(entries)
     decoded_1478 = [v for e in decoded for v in e if v in [1, 4, 7, 8]]
     logging.info(f'Part 1: {len(decoded_1478)} unique entries in input')
-    part2()
-    logging.info(f'Part 2: ')
+    sum_digits = sum(v * 10 ** i for elem in decoded for v, i in zip(elem, [3, 2, 1, 0]))
+    logging.info(f'Part 2: Sum of 7-Segment Digits {sum_digits}')
 
 if __name__ == '__main__':
     args = setup()
