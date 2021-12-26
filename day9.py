@@ -4,7 +4,9 @@
 import sys
 import logging
 
-from dataclasses import dataclass
+from collections import defaultdict
+from dataclasses import dataclass, field
+from functools import reduce
 from typing import Dict, List, Optional, Tuple
 
 from lib import setup
@@ -17,10 +19,21 @@ example_input = """2199943210
 """
 
 @dataclass
+class Point:
+    x: int
+    y: int
+
+@dataclass
 class Extreme:
     x: int
     y: int
     risk: int
+
+@dataclass
+class Basin:
+    id: int
+    size: int = 0
+    points: List[Point] = field(default_factory=list)
 
 def read_inputs(example=0) -> Tuple[List[List[int]], int, int]:
     
@@ -61,8 +74,87 @@ def part1(field, width, height) -> List[Extreme]:
     
     return extremes
 
-def part2():
-    pass
+def part2(field, width, height) -> List[Basin]:
+    
+    basins = []
+    
+    combined_basins = defaultdict(lambda: set())
+    
+    VALLEY   = -1
+    MOUNTAIN = 9999
+    
+    # combine all low points, mountains
+    for y in range(0, height + 2):
+        for x in range(0, width + 2):
+            field[y][x] = VALLEY if (field[y][x] < 9) else MOUNTAIN
+    
+    # collect basins
+    for y in range(1, height + 1):
+        for x in range(1, width + 1):
+            # skip if mountain
+            if (field[y][x] == MOUNTAIN):
+                continue
+            t = field[y-1][x]
+            l = field[y][x-1]
+            
+            # differentiate two cases:
+            # - new basin
+            # - point in basin
+            #   - middle        (top/left same basin)
+            #   - meeting point (top/left different basin)
+            if (t == MOUNTAIN and l == MOUNTAIN):
+                # new basin
+                basin_id = len(basins)
+                basins.append(Basin(id=basin_id, size=1, points=[Point(x, y)]))
+                field[y][x] = basin_id
+            else:
+                if (t != MOUNTAIN and l != MOUNTAIN and t != l):
+                    # two basins meet, we need to add a merge entry
+                    key = min(t, l)
+                    combined_basins[key].add(max(t, l))
+                
+                basin_id = min(t, l)
+                basin = basins[basin_id]
+                basin.size += 1
+                basin.points.append(Point(x, y))
+                field[y][x] = basin_id
+    
+    # figure out which basins to copy directly
+    copy_basin_ids = set(list(range(len(basins))))
+    copy_basin_ids -= set(list(combined_basins.keys()))
+    copy_basin_ids -= reduce(set.union, combined_basins.values())
+    
+    # recursively combine basin ID sets
+    def _merge_basin_lists(keys):
+        result = set()
+        for key in keys:
+            result.add(key)
+            result |= _merge_basin_lists(combined_basins.get(key, set()))
+        return result
+    
+    seen_basins = set()
+    
+    for key in combined_basins:
+        if (key in seen_basins):
+            continue
+        combined_basins[key] = _merge_basin_lists(combined_basins[key])
+        seen_basins.update(combined_basins[key])
+    
+    for key in seen_basins:
+        if (key in combined_basins):
+            del combined_basins[key]
+    
+    results = [basins[i] for i in copy_basin_ids]
+    
+    for key, values in combined_basins.items():
+        basin = basins[key]
+        results.append(basin)
+        for value in values:
+            other = basins[value]
+            basin.size += other.size
+            basin.points += other.points
+    
+    return list(sorted(results, key=lambda basin: -basin.size))
 
 def main(args):
     
@@ -70,8 +162,11 @@ def main(args):
     minima = part1(field, width, height)
     risk = sum(map(lambda extreme: extreme.risk, minima))
     logging.info(f'Part 1: Cumulative risk is {risk}.')
-    part2()
-    logging.info(f'Part 2: ')
+    basins = part2(field, width, height)
+    largest_basins = basins[:3]
+    logging.info(f'Part 2: three largest basins: {", ".join(f"Basin {basin.id} ({basin.size})" for basin in largest_basins)}')
+    multiplied_size = reduce(int.__mul__, [basin.size for basin in largest_basins])
+    logging.info(f'Part 2: Multiplied Basin Size: {multiplied_size}')
 
 if __name__ == '__main__':
     args = setup()
