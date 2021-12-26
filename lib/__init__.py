@@ -37,7 +37,7 @@ def setup(install_arguments: Callable[[argparse.ArgumentParser], None] = None) -
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Advent of Code.', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--loglevel', help='Loglevel, one of \'DEBUG\', \'INFO\' (default), \'WARNING\', \'ERROR\'.', type=str, default='INFO')
-    parser.add_argument('--example', help='Use example data.', action='store_true', default=False)
+    parser.add_argument('--example', help='Use example data.', type=int, choices=range(1,10+1), default=0)
     if (install_arguments is not None):
         install_arguments(parser)
 

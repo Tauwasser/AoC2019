@@ -11,7 +11,7 @@ from lib import setup
 example_input = """
 """
 
-def read_inputs(example=False):
+def read_inputs(example=0):
     
     if (example):
         data = example_input
