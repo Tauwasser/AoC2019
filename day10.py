@@ -28,6 +28,13 @@ error_scores = {
     '>': 25137,
 }
 
+completion_scores = {
+    ')': 1,
+    ']': 2,
+    '}': 3,
+    '>': 4,
+}
+
 chunk_types = {
     '(': ')',
     '[': ']',
@@ -62,6 +69,12 @@ class Line:
     classification: object = Valid
     error: Tuple[int, Chunk] = (-1, None)
     chunks: List[Chunk] = field(default_factory=list)
+
+@dataclass
+class Completion:
+    line: Line
+    chars: str = ''
+    score: int = 0 
 
 class ParsingError(Exception):
     
@@ -141,8 +154,37 @@ def part1(navigation: List[str]) -> List[Line]:
     
     return result
     
-def part2():
-    pass
+def part2(incomplete: List[Line]) -> List[Completion]:
+    
+    completions = []
+    
+    for line in incomplete:
+        
+        completion = Completion(line)
+        completions.append(completion)
+        
+        container = line
+        
+        while (True):
+            
+            # incomplete chunk must always be along "last" axis
+            chunk = container.chunks[-1]
+            
+            completion.chars += chunk_types[chunk.type]
+            if (chunk == line.error[1]):
+                # we found the end
+                break
+            
+            container = chunk
+        
+        # have to determine score in "closing" order
+        completion.chars = completion.chars[::-1]
+        
+        for char in completion.chars:
+            completion.score *= 5
+            completion.score += completion_scores[char]
+    
+    return completions
 
 def main(args):
     
@@ -151,8 +193,11 @@ def main(args):
     corrupted = list(filter(lambda line: line.classification == Corrupted, parsed))
     score = sum(map(lambda line: error_scores[line.raw[line.error[0]]], corrupted))
     logging.info(f'Part 1: Error Score of {len(corrupted)} corrupted lines is {score}.')
-    part2()
-    logging.info(f'Part 2: ')
+    incomplete = list(filter(lambda line: line.classification == Incomplete, parsed))
+    completions = part2(incomplete)
+    scores = sorted(map(lambda completion: completion.score, completions))
+    score = scores[len(scores)//2]
+    logging.info(f'Part 2: Completion Score of {len(incomplete)} incomplete lines is {score}.')
 
 if __name__ == '__main__':
     args = setup()
