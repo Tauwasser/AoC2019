@@ -4,6 +4,7 @@
 import sys
 import logging
 
+from copy import deepcopy
 from collections import defaultdict
 from functools import reduce
 from typing import Dict, List, Optional, Tuple
@@ -45,12 +46,15 @@ def read_inputs(example=0) -> Tuple[List[List[int]], int, int]:
     # field is surrounded by band of dummy dumbo octupuses with zero energy
     return field, width - 2, height
 
-def part1(field, width, height, steps=100):
+def part1(field, width, height, steps=100) -> Tuple[int, int]:
     
     # keep a dynamic list of flashing dumbo octopuses
     # to prevent polynomial/exponential run-time
     
     flashes = 0
+    flashes_this_step = 0
+    num_octopuses = width * height
+    first_flash = -1
     octopuses = []
     
     ys = range(1, height + 1)
@@ -58,13 +62,18 @@ def part1(field, width, height, steps=100):
     
     def inc(x, y):
         nonlocal flashes
+        nonlocal flashes_this_step
         field[y][x] += 1
         # only record octopus on first flash this step
         if (field[y][x] == 10 and y in ys and x in xs):
             flashes += 1
+            flashes_this_step += 1
             octopuses.append((x, y))
     
-    for _ in range(steps):
+    for step in range(1, steps + 1):
+        
+        # reset flashes/step counter
+        flashes_this_step = 0
         
         # increment energy
         for y in range(1, height + 1):
@@ -92,19 +101,20 @@ def part1(field, width, height, steps=100):
             for x in range(1, width + 1):
                 if (field[y][x] > 9):
                     field[y][x] = 0
+        
+        # record step of first synchronized dumbo octopus flash
+        if (first_flash == -1 and flashes_this_step == num_octopuses):
+            first_flash = step
     
-    return flashes
-
-def part2(field, width, height):
-    pass
+    return flashes, first_flash
 
 def main(args):
     
     field, width, height = read_inputs(args.example)
-    flashes = part1(field, width, height, steps=100)
+    flashes, all_flash_step = part1(deepcopy(field), width, height, steps=100)
     logging.info(f'Part 1: {flashes} flashes after 100 steps.')
-    part2(field, width, height)
-    logging.info(f'Part 2: ')
+    flashes, all_flash_step = part1(deepcopy(field), width, height, steps=1000)
+    logging.info(f'Part 2: First step when all dumbo octopuses flash is step {all_flash_step}.')
 
 if __name__ == '__main__':
     args = setup()
