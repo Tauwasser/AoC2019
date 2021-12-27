@@ -5,12 +5,13 @@ from os import path
 import sys
 import logging
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from lib import setup
 
-# 10 paths
+# 10 paths, 36 paths (small twice)
 example1_input = """start-A
 start-b
 A-c
@@ -20,7 +21,7 @@ A-end
 b-end
 """
 
-# 19 paths
+# 19 paths, 103 paths (small twice)
 example2_input = """dc-end
 HN-start
 start-kj
@@ -33,7 +34,7 @@ kj-HN
 kj-dc
 """
 
-# 226 paths
+# 226 paths, 3509 paths (small twice)
 example3_input = """fs-end
 he-DX
 fs-he
@@ -126,16 +127,58 @@ def part1(caves: Dict[str, Cave]) -> List[List[str]]:
     
     return _explore(start)
 
-def part2():
-    pass
+def part2(caves: Dict[str, Cave]) -> List[List[str]]:
+    
+    start = caves['start']
+    end = caves['end']
+    
+    def _explore(_from: Cave, path_so_far = None, visit_count = None):
+        
+        path_so_far = [*(path_so_far or []), _from.name]
+        visit_count = defaultdict(lambda: 0, visit_count or {})
+        result = []
+        
+        for cave in _from.caves:
+            
+            # do not visit start twice
+            if (cave is start):
+                continue
+            
+            # break if we found the end node
+            # (do not explore it)
+            if (cave is end):
+                result.append([*path_so_far, cave.name])
+                continue
+            
+            # local copy of visit count when taking this branch
+            branch_visit_count = visit_count.copy()
+            
+            # check small cave rules
+            if (not cave.big):
+                # skip small caves that were already visited twice
+                if (visit_count.get(cave.name, 0) >= 2):
+                    continue
+                # skip small caves that were already visited when any small cave was visited twice
+                if (visit_count.get(cave.name, 0) == 1 and any(x >= 2 for x in visit_count.values())):
+                    continue
+                # increment small cave visit count
+                branch_visit_count[cave.name] += 1
+            
+            next_paths = _explore(cave, path_so_far=path_so_far, visit_count=branch_visit_count)
+            if (next_paths):
+                result += next_paths
+        
+        return result
+    
+    return _explore(start)
 
 def main(args):
     
     caves = read_inputs(args.example)
     paths = part1(caves)
     logging.info(f'Part 1: There are {len(paths)} unique paths.')
-    part2()
-    logging.info(f'Part 2: ')
+    paths = part2(caves)
+    logging.info(f'Part 2: There are {len(paths)} unique paths (visit small twice)')
 
 if __name__ == '__main__':
     args = setup()
