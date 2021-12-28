@@ -4,6 +4,7 @@
 import sys
 import logging
 
+from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 from lib import setup
@@ -78,8 +79,45 @@ def part1(template: str, rules: Dict[str, str], steps=10) -> str:
     
     return polymer
 
-def part2(polymer: str, rules: Dict[str, str], steps=40):
-    return part1(polymer, rules, steps=steps)
+def part2(polymer: str, rules: Dict[str, str], steps=40) -> Dict[str, int]:
+    
+    # transform template into dictionary of pair -> count
+    # transform template into dictionary of element -> count
+    counts = defaultdict(lambda: 0)
+    result = defaultdict(lambda: 0)
+    for position in range(len(polymer) - 1):
+        # get pair of elements
+        pair = polymer[position:position+2]
+        counts[pair] += 1
+        result[pair[0]] += 1
+        
+    result[polymer[-1]] += 1
+    
+    for _ in range(steps):
+        
+        # check each pair at all occuring positions
+        for pair, count in list(counts.items()):
+            
+            # skip removed pairs
+            if (not count):
+                continue
+            
+            # find what (if any) element to insert
+            element = rules.get(pair, None)
+            if (element is None):
+                continue
+            
+            # remove existing pair
+            counts[pair] -= count
+            # insert changed lhs pair
+            counts[pair[0] + element] += count
+            # insert new rhs pair
+            counts[element + pair[1]] += count
+            # count newly inserted element
+            result[element] += count
+    
+    # return sorted (element, count) tuples
+    return sorted(result.items(), key=lambda keyvalue: keyvalue[1])
 
 def getMostAndLeastCommon(polymer: str) -> Tuple[Tuple[str, int], Tuple[str, int]]:
     
@@ -95,9 +133,11 @@ def main(args):
     most_common, least_common = getMostAndLeastCommon(polymer)
     logging.debug(f'Part 1: Polymer after 10 steps: {polymer}')
     logging.info(f'Part 1: Delta most/least common after 10 steps: {most_common[1] - least_common[1]} ({most_common[0]}: {most_common[1]} {least_common[0]}: {least_common[1]})')
-    polymer = part2(template, rules, steps=40)
-    most_common, least_common = getMostAndLeastCommon(polymer)
-    logging.debug(f'Part 2: Polymer after 40 steps: {polymer}')
+    counts = part2(template, rules, steps=10)
+    most_common, least_common = counts[-1], counts[0]
+    logging.info(f'Part 1: Delta most/least common after 10 steps: {most_common[1] - least_common[1]} ({most_common[0]}: {most_common[1]} {least_common[0]}: {least_common[1]})')
+    counts = part2(template, rules, steps=40)
+    most_common, least_common = counts[-1], counts[0]
     logging.info(f'Part 2: Delta most/least common after 40 steps: {most_common[1] - least_common[1]} ({most_common[0]}: {most_common[1]} {least_common[0]}: {least_common[1]})')
 
 if __name__ == '__main__':
