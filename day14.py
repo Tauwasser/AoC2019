@@ -78,21 +78,27 @@ def part1(template: str, rules: Dict[str, str], steps=10) -> str:
     
     return polymer
 
-def part2():
-    pass
+def part2(polymer: str, rules: Dict[str, str], steps=40):
+    return part1(polymer, rules, steps=steps)
+
+def getMostAndLeastCommon(polymer: str) -> Tuple[Tuple[str, int], Tuple[str, int]]:
+    
+    counts = {key: polymer.count(key) for key in set(polymer)}
+    sorted_counts = sorted(counts.items(), key=lambda keyvalue: keyvalue[1])
+    
+    return sorted_counts[-1], sorted_counts[0]
 
 def main(args):
     
     template, rules = read_inputs(args.example)
     polymer = part1(template, rules, steps=10)
-    counts = {key: polymer.count(key) for key in set(polymer)}
-    sorted_counts = sorted(counts.items(), key=lambda keyvalue: keyvalue[1])
-    most_common = sorted_counts[-1]
-    least_common = sorted_counts[0]
+    most_common, least_common = getMostAndLeastCommon(polymer)
     logging.debug(f'Part 1: Polymer after 10 steps: {polymer}')
     logging.info(f'Part 1: Delta most/least common after 10 steps: {most_common[1] - least_common[1]} ({most_common[0]}: {most_common[1]} {least_common[0]}: {least_common[1]})')
-    part2()
-    logging.info(f'Part 2: ')
+    polymer = part2(template, rules, steps=40)
+    most_common, least_common = getMostAndLeastCommon(polymer)
+    logging.debug(f'Part 2: Polymer after 40 steps: {polymer}')
+    logging.info(f'Part 2: Delta most/least common after 40 steps: {most_common[1] - least_common[1]} ({most_common[0]}: {most_common[1]} {least_common[0]}: {least_common[1]})')
 
 if __name__ == '__main__':
     args = setup()
