@@ -8,7 +8,7 @@ import math
 from enum import IntEnum, IntFlag
 from dataclasses import dataclass, field
 from sortedcontainers import SortedList
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from lib import setup
 
@@ -38,21 +38,24 @@ class Direction(IntFlag):
     RIGHT  = 8
     ALL    = TOP | BOTTOM | LEFT | RIGHT
 
+# forward-declare Node
+class Node:
+    pass
+
 @dataclass
 class Node:
     x: int
     y: int
     risk: int
+    heur: int
     explored: Direction
+    cost: Union[float,int] = math.inf
+    prev: Node = None
 
 @dataclass
 class Path:
-    risk: int
-    nodes: List[Node]
-    
-    @property
-    def node(self):
-        return self.nodes[-1]
+    cost: int
+    nodes: List[Node] = field(default_factory=list)
 
 def read_inputs(example=0) -> Field:
     
@@ -70,15 +73,15 @@ def read_inputs(example=0) -> Field:
 
 def part1(field: Field) -> Optional[Path]:
     
-    start = Node(0, 0, field.data[0][0], Direction.TOP | Direction.LEFT)
-    end = Node(field.width - 1, field.height - 1, field.data[field.height - 1][field.width - 1], Direction.RIGHT | Direction.BOTTOM)
+    start = Node(0, 0, field.data[0][0], field.height + field.width - 2, Direction.TOP | Direction.LEFT, cost=0)
+    end = Node(field.width - 1, field.height - 1, field.data[field.height - 1][field.width - 1], 0, Direction.RIGHT | Direction.BOTTOM)
     
     # count explored nodes
     explored = 0
     
-    # list of paths (sorted ascending by risk)
-    paths : SortedList[Path] = SortedList(key=lambda path: path.risk)
-    paths.add(Path(0, [start]))
+    # list of nodes (sorted ascending by heuristic)
+    node_list : SortedList[Node] = SortedList(key=lambda node: node.cost + node.heur)
+    node_list.add(start)
     
     # map of nodes (x, y) -> Node
     nodes : Dict[Tuple[int, int], Node] = {
@@ -98,64 +101,92 @@ def part1(field: Field) -> Optional[Path]:
             direction |= Direction.BOTTOM
         return direction
     
-    # explore a path node
-    def explore(path, direction, dx, dy):
+    # explore a node
+    def explore(node: Node, direction: Direction, dx: int, dy: int):
         nonlocal explored
         
-        if (path.node.explored & direction):
+        if (node.explored & direction):
             return
         
         # get new node data
-        x = path.node.x + dx
-        y = path.node.y + dy
+        x = node.x + dx
+        y = node.y + dy
         risk = field.data[y][x]
+        heur = end.x - x + end.y - y
         
         # mark node direction explored
-        path.node.explored |= direction
+        node.explored |= direction
         # get/create target node
-        node = nodes.get((x, y), Node(x, y, risk, possible_directions(x, y)))
-        nodes[(x, y)] = node
+        next = nodes.get((x, y), Node(x, y, risk, heur, possible_directions(x, y)))
+        nodes[(x, y)] = next
         
         # explore target node if not fully explored yet
-        if (node.explored != Direction.ALL):
+        if (next.explored != Direction.ALL):
             
             # check if existing path might be cheaper
-            existing = next(filter(lambda path: path.node.x == x and path.node.y == y, paths), None)
-            if (existing is not None and (existing.risk <= path.risk + node.risk)):
+            if (next.cost <= node.cost + next.risk):
                 return
             
-            logging.debug(f'Exploring Node at ({x}, {y}).')
-            explored += 1
-            paths.add(Path(path.risk + node.risk, path.nodes[:] + [node]))
+            # store cheapest cost to reach node
+            next.cost = min(next.cost, node.cost + next.risk)
+            next.prev = node
+            node_list.add(next)
     
     while (True):
         
         # explore node at cheapest path
-        path = paths.pop(0)
+        node = node_list.pop(0)
+        explored += 1
+        logging.debug(f'Exploring Node at ({node.x}, {node.y}).')
         
         # we found the cheapest path to end node
-        if (path.node.x == end.x and path.node.y == end.y):
-            logging.info(f'Explored {explored} nodes.')
-            return path
+        if (node is end):
+            break
         
         # create nodes/paths for all unexplored directions
-        explore(path, Direction.TOP,    0, -1)
-        explore(path, Direction.BOTTOM, 0, +1)
-        explore(path, Direction.LEFT,   -1, 0)
-        explore(path, Direction.RIGHT,  +1, 0)
+        explore(node, Direction.TOP,    0, -1)
+        explore(node, Direction.BOTTOM, 0, +1)
+        explore(node, Direction.LEFT,   -1, 0)
+        explore(node, Direction.RIGHT,  +1, 0)
     
-    return None
+    logging.info(f'Explored {explored} nodes.')
+    result = Path(node.cost, [node])
+    # sum all previous nodes
+    while (node is not start):
+        result.nodes.append(node.prev)
+        node = node.prev
+    result.nodes.reverse()
+    return result
 
-def part2():
-    pass
+def part2(field: Field) -> Path:
+    
+    w = field.width
+    h = field.height
+    width = field.width * 5
+    height = field.height * 5
+    
+    # new data array
+    data = [[0 for _ in range(width)] for _ in range(height)]
+    
+    # scale field data
+    for cpy_y in range(0, 5):
+        for cpy_x in range(0, 5):
+            offset = cpy_y + cpy_x
+            for y in range(h):
+                for x in range(w):
+                    data[cpy_y*h + y][cpy_x*w + x] = 1 + (offset + field.data[y][x] - 1) % 9
+    
+    field = Field(data, width, height)
+    return part1(field)
 
 def main(args):
     
+    logging.info('Start A* search')
     field = read_inputs(args.example)
     path = part1(field)
-    logging.info(f'Part 1: {path.risk} risk for cheapest path ({len(path.nodes)} nodes).')
-    part2()
-    logging.info(f'Part 2: ')
+    logging.info(f'Part 1: {path.cost} risk for cheapest path ({len(path.nodes)} nodes).')
+    path = part2(field)
+    logging.info(f'Part 2: {path.cost} risk for cheapest 5x5 path ({len(path.nodes)} nodes).')
 
 if __name__ == '__main__':
     args = setup()
