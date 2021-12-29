@@ -4,7 +4,7 @@
 import sys
 import logging
 
-from math import sqrt
+from math import atan, sqrt
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
@@ -17,6 +17,11 @@ example_input = """target area: x=20..30, y=-10..-5
 class TargetArea:
     x: range
     y: range
+
+@dataclass
+class Point:
+    x: int
+    y: int
 
 def read_inputs(example=0) -> TargetArea:
     
@@ -38,7 +43,7 @@ def read_inputs(example=0) -> TargetArea:
     
     return TargetArea(range(x_range[1], x_range[2] + 1), range(y_range[1], y_range[2] + 1))
 
-def part1(target: TargetArea) -> Tuple[int, int, int]:
+def part1(target: TargetArea) -> Tuple[int, int, int, int]:
     
     # final (and highest) x position will be
     # x_0 + x_0 - 1 + x_0 - 2 etc.
@@ -75,6 +80,7 @@ def part1(target: TargetArea) -> Tuple[int, int, int]:
     best_y_highest = 0
     best_x0 = None
     best_y0 = None
+    num_diff_x0y0 = 0
     
     for x0 in x0s:
         # sweep y_0 from 250 to x0 (45°)
@@ -103,23 +109,66 @@ def part1(target: TargetArea) -> Tuple[int, int, int]:
                 points.append((x, y + y_off))
             if any(x in target.x and y in target.y for x, y in points):
                 y_highest = max(y for x, y in points)
+                num_diff_x0y0 += 1
+                logging.info(f'Vector {x0}/{y0}')
                 if (y_highest > best_y_highest):
                     best_y_highest = y_highest
                     best_x0 = x0
                     best_y0 = y0
     
-    return best_x0, best_y0, best_y_highest
+    return best_x0, best_y0, best_y_highest, num_diff_x0y0
 
-def part2():
-    pass
+def part2(target: TargetArea) -> int:
+    
+    # shallow shots must start above 45° line
+    # from origin to bottom left corner.
+    bl = Point(target.x.start, target.y.start)
+    
+    num_diff_x0y0 = 0
+    
+    # determine theta max
+    # theta := atan(opposite/adjacent)
+    theta_max = atan(-bl.y / bl.x)
+    
+    for x0 in range(1, 250):
+        for y0 in range(x0 - 1, -250, -1):
+            theta = atan(-y0 / x0)
+            if not(theta <= theta_max):
+                continue
+            # calculate first 200 points
+            x = 0
+            y = 0
+            dx = x0
+            dy = y0
+            found = False
+            for _ in range(250):
+                x += dx
+                y += dy
+                dx = max(dx - 1, 0)
+                dy -= 1
+                # stop computation if we missed already
+                if (x >= target.x.stop or y < target.y.start):
+                    break
+                # end computation if we hit
+                if (x in target.x and y in target.y):
+                    found = True
+                    break
+            # abort this vector
+            if (not found):
+                continue
+            logging.info(f'Vector {x0}/{y0}')
+            num_diff_x0y0 += 1
+    
+    return num_diff_x0y0
 
 def main(args):
     
     target = read_inputs(args.example)
-    v_x, v_y, y_highest = part1(target)
-    logging.info(f'Part 1: Initial Velocity {v_x}/{v_y} for highest y {y_highest}.')
-    part2()
-    logging.info(f'Part 2: ')
+    v_x, v_y, y_highest, num_v = part1(target)
+    logging.info(f'Part 1: Initial Velocity {v_x}/{v_y} for highest y {y_highest} ({num_v} vectors).')
+    num_v_shallow = part2(target)
+    # add the number of vectors from part 1 to number of vectors from part 2
+    logging.info(f'Part 2: {num_v} vectors (part 1) + {num_v_shallow} shallow vectors (part 2) = {num_v + num_v_shallow}')
 
 if __name__ == '__main__':
     args = setup()
