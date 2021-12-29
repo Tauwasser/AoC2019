@@ -3,8 +3,10 @@
 
 import sys
 import logging
+import operator
 
 from enum import IntEnum
+from functools import reduce
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
@@ -23,14 +25,14 @@ example4_input = """A0016C880162017C3686B18A3D4780
 """
 
 class PacketType(IntEnum):
-    OP0 =     0
-    OP1 =     1
-    OP2 =     2
-    OP3 =     3
+    SUM =     0
+    PROD =    1
+    MIN =     2
+    MAX =     3
     LITERAL = 4
-    OP5 =     5
-    OP6 =     6
-    OP7 =     7
+    GT =      5
+    LT =      6
+    EQ =      7
 
 @dataclass
 class Packet:
@@ -124,6 +126,30 @@ def parse_packet(br: BitReader) -> Packet:
         
         return Operator(version, type, packets)
 
+def _calc_packet(packet: Packet) -> int:
+    
+    if (PacketType.LITERAL == packet.type):
+        return packet.value
+    
+    values = [_calc_packet(p) for p in packet.packets]
+    
+    if (PacketType.SUM == packet.type):
+        return sum(values)
+    elif (PacketType.PROD == packet.type):
+        return reduce(operator.mul, values)
+    elif (PacketType.MIN == packet.type):
+        return min(values)
+    elif (PacketType.MAX == packet.type):
+        return max(values)
+    elif (PacketType.LT == packet.type):
+        return 1 if (values[0] < min(values[1:])) else 0
+    elif (PacketType.GT == packet.type):
+        return 1 if (values[0] > max(values[1:])) else 0
+    elif (PacketType.EQ == packet.type):
+        return 1 if all(values[0] == x for x in values[1:]) else 0
+    else:
+        raise RuntimeError(f'Unimplemented Packet Type {packet.type}')
+
 def read_inputs(example=0):
     
     if (1 == example):
@@ -155,16 +181,16 @@ def part1(packet: Packet) -> int:
     _visit_packet(packet)
     return result
 
-def part2():
-    pass
+def part2(packet: Packet) -> int:
+    return _calc_packet(packet)
 
 def main(args):
     
     packet = read_inputs(args.example)
     sum_versions = part1(packet)
     logging.info(f'Part 1: sum of version numbers = {sum_versions}')
-    part2()
-    logging.info(f'Part 2: ')
+    result = part2(packet)
+    logging.info(f'Part 2: result of packet = {result}')
 
 if __name__ == '__main__':
     args = setup()
