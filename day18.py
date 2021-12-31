@@ -5,6 +5,7 @@ import sys
 import json
 import logging
 
+from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, Union
 
 from lib import setup
@@ -90,7 +91,7 @@ class SnailfishNumber:
         if not isinstance(other, SnailfishNumber):
             return NotImplemented
         
-        return SnailfishNumber(self, other).reduce()
+        return SnailfishNumber(deepcopy(self), deepcopy(other)).reduce()
     
     def reduce(self) -> 'SnailfishNumber':
         
@@ -249,16 +250,31 @@ def part1(numbers: List[SnailfishNumber]) -> SnailfishNumber:
     
     return result
 
-def part2():
-    pass
+def part2(numbers: List[SnailfishNumber]) -> SnailfishNumber:
+    
+    # |[0,0]| = 0
+    largest_number = SnailfishNumber(0, 0)
+    
+    for ix, lhs in enumerate(numbers):
+        for rhs in numbers[ix+1:]:
+            # try lhs + rhs fist
+            result = lhs + rhs
+            if (int(result) > int(largest_number)):
+                largest_number = result
+            # try rhs + lhs next
+            result = rhs + lhs
+            if (int(result) > int(largest_number)):
+                largest_number = result
+    
+    return largest_number
 
 def main(args):
     
     numbers = read_inputs(args.example)
     result = part1(numbers)
     logging.info(f'Part 1: Result of adding {len(numbers)} Snailfish Numbers: {result!r}.\n{result!s}')
-    part2()
-    logging.info(f'Part 2: ')
+    result = part2(numbers)
+    logging.info(f'Part 2: Largest Snailfish Number by Magnitude: {result!r}.\n{result!s}')
 
 if __name__ == '__main__':
     args = setup()
