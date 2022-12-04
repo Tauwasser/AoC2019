@@ -27,6 +27,14 @@ class Section:
         if (self.begin <= other.begin and self.end >= other.end):
             return True
         return False
+    
+    def overlap(self, other: 'Section') -> bool:
+        
+        if (self.begin <= other.begin and self.end >= other.begin):
+            return True
+        if (self.begin > other.begin and self.begin <= other.end):
+            return True
+        return False
 
 @dataclass
 class ElfPair:
@@ -51,7 +59,7 @@ def read_inputs(example=0) -> List[ElfPair]:
     
     return elf_pairs
 
-def part1(elf_pairs: List[ElfPair]):
+def part1(elf_pairs: List[ElfPair]) -> int:
     
     need_reassignment = 0
     for elf_pair in elf_pairs:
@@ -64,16 +72,26 @@ def part1(elf_pairs: List[ElfPair]):
     
     return need_reassignment
 
-def part2():
-    pass
+def part2(elf_pairs: List[ElfPair]) -> int:
+    
+    overlap = 0
+    for elf_pair in elf_pairs:
+        if (elf_pair.lhs.overlap(elf_pair.rhs)):
+            overlap += 1
+            continue
+        if (elf_pair.rhs.overlap(elf_pair.lhs)):
+            overlap += 1
+            continue
+    
+    return overlap
 
 def main(args):
     
     elf_pairs = read_inputs(args.example)
     need_reassignment = part1(elf_pairs)
     logging.info(f'Part 1: {need_reassignment} elf pairs need reassignment')
-    part2()
-    logging.info(f'Part 2: ')
+    overlap_assignment = part2(elf_pairs)
+    logging.info(f'Part 2: {overlap_assignment} elf pairs overlap')
 
 if __name__ == '__main__':
     args = setup()
