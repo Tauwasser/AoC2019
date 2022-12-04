@@ -5,6 +5,8 @@ import sys
 import logging
 
 from dataclasses import dataclass
+from functools import reduce
+from itertools import zip_longest
 from typing import Dict, List, Optional, Tuple
 
 from lib import setup
@@ -56,16 +58,22 @@ def part1(rucksacks: List[Rucksack]) -> int:
     
     return priorities
 
-def part2():
-    pass
+def part2(rucksacks: List[Rucksack]):
+    
+    priorities = 0
+    for bags in zip_longest(*(iter(rucksacks),) * 3):
+        item = reduce(lambda lhs, rhs: lhs & rhs, map(lambda bag: set(bag.lhs + bag.rhs), bags))
+        priorities += get_priority(''.join(item))
+    
+    return priorities
 
 def main(args):
     
     rucksacks = read_inputs(args.example)
     sum_priorities = part1(rucksacks)
     logging.info(f'Part 1: Sum of Priorities {sum_priorities}')
-    part2()
-    logging.info(f'Part 2: ')
+    badge_sum_priorities = part2(rucksacks)
+    logging.info(f'Part 2: Sum of Badge Priorities {badge_sum_priorities}')
 
 if __name__ == '__main__':
     args = setup()
