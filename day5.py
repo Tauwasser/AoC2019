@@ -5,6 +5,7 @@ import sys
 import logging
 import re
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
@@ -123,16 +124,36 @@ def part1(stacks: List[Stack], commands: List[Command]) -> str:
     
     return labels
 
-def part2():
-    pass
+def part2(stacks: List[Stack], commands: List[Command]) -> str:
+    
+    # draw initial state
+    _draw_stacks(stacks)
+    
+    for command in commands:
+        
+        logging.info(f'Move {command.num} from {command.src} to {command.dst}')
+        
+        src = stacks[command.src - 1]
+        dst = stacks[command.dst - 1]
+        dst.crates += src.crates[-command.num:]
+        src.crates = src.crates[:-command.num]
+        _draw_stacks(stacks)
+    
+    labels = ''
+    # determine top crates
+    for stack in stacks:
+        if (len(stack.crates) > 0):
+            labels += stack.crates[-1]
+    
+    return labels
 
 def main(args):
     
     stacks, commands = read_inputs(args.example)
-    crates_on_top = part1(stacks, commands)
+    crates_on_top = part1(deepcopy(stacks), commands)
     logging.info(f'Part 1: Crates on top {crates_on_top}')
-    part2()
-    logging.info(f'Part 2: ')
+    crates_on_top = part2(deepcopy(stacks), commands)
+    logging.info(f'Part 2: Crates on top {crates_on_top}')
 
 if __name__ == '__main__':
     args = setup()
