@@ -265,16 +265,35 @@ def part1(opcodes: List[Opcode]):
     # return sum of signal stengths of cycles 20, 60, 100, 140, 180, 220
     return sum(signal_stengths[c] for c in [20, 60, 100, 140, 180, 220])
 
-def part2():
-    pass
+def part2(opcodes: List[Opcode]) -> str:
+    
+    cpu = CPU()
+    cycle = 1
+    display = [['.' for _ in range(40)] for _ in range(6)]
+    
+    for opcode in opcodes:
+        # record registers during cycle
+        registers = {**cpu.registers}
+        # execute opcode
+        cpu.execute(opcode)
+        # determine signal stengths
+        for cycle in range(cycle, cpu.cycles):
+            y = (cycle - 1) // 40
+            x = (cycle - 1) % 40
+            if any(v == registers['X'] for v in [x + 1, x, x - 1]):
+                display[y][x] = '#'
+        cycle = cpu.cycles
+    
+    # return the CRT display
+    return '\n'.join(''.join(display[y]) for y in range(6))
 
 def main(args):
     
     opcodes = read_inputs(args.example)
     signal_stengths = part1(opcodes)
     logging.info(f'Part 1: Sum of Signal Stengths = {signal_stengths}')
-    part2()
-    logging.info(f'Part 2: ')
+    display = part2(opcodes)
+    logging.info(f'Part 2: Display\n{display}')
 
 if __name__ == '__main__':
     args = setup()
