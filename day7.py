@@ -165,16 +165,26 @@ def part1(root: Directory):
 
     return candidate_directories
 
-def part2():
-    pass
+def part2(root: Directory):
+    
+    total_space = 70000000
+    min_free = 30000000
+
+    free_space = total_space - root.size
+    delete_at_least = min_free - free_space
+
+    directory_sizes = {dir.path: dir.size for dir in root.iter() if type(dir) is Directory}
+
+    path, size = next(filter(lambda dir_size: dir_size[1] >= delete_at_least, sorted(directory_sizes.items(), key=lambda dir_size: dir_size[1])))
+    return path, size
 
 def main(args):
     
     tree = read_inputs(args.example)
     candidate_directories = part1(tree)
     logging.info(f'Part 1: Candidate Directories {", ".join(candidate_directories)} Sum {sum(candidate_directories.values())}')
-    part2()
-    logging.info(f'Part 2: ')
+    path, size = part2(tree)
+    logging.info(f'Part 2: Delete Directory {path} Size {size}')
 
 if __name__ == '__main__':
     args = setup()
