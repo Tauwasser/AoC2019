@@ -5,6 +5,7 @@ import sys
 import logging
 
 from dataclasses import dataclass, field
+from math import prod
 from typing import Dict, List, Optional, Tuple
 
 from lib import setup
@@ -88,16 +89,92 @@ def part1(grid: Grid) -> int:
     
     return visible_trees
 
-def part2():
-    pass
+def _makeHorizontalCounts(grid: Grid) -> Tuple[List[List[Dict[int, int]]]]:
+    
+    view_t = [[{i: 0 for i in range(10)} for _ in range(grid.width)] for _ in range(grid.height)]
+    
+    for h in range(1, grid.height):
+        for w in range(0, grid.width):
+            for i in range(10):
+                view_t[h][w][i] = view_t[h - 1][w][i]
+                if (grid.data[h - 1][w] < i):
+                    view_t[h][w][i] += 1
+                else:
+                    view_t[h][w][i] = 1
+    
+    view_b = [[{i: 0 for i in range(10)} for _ in range(grid.width)] for _ in range(grid.height)]
+    
+    for h in range(grid.height - 2, -1, -1):
+        for w in range(0, grid.width):
+            for i in range(10):
+                view_b[h][w][i] = view_b[h + 1][w][i]
+                if (grid.data[h + 1][w] < i):
+                    view_b[h][w][i] += 1
+                else:
+                    view_b[h][w][i] = 1
+
+    return view_t, view_b
+
+def _makeVerticalCounts(grid: Grid) -> Tuple[List[List[Dict[int, int]]]]:
+    
+    view_l = [[{i: 0 for i in range(10)} for _ in range(grid.width)] for _ in range(grid.height)]
+    
+    for w in range(1, grid.width):
+        for h in range(0, grid.height):
+            for i in range(10):
+                view_l[h][w][i] = view_l[h][w - 1][i]
+                if (grid.data[h][w - 1] < i):
+                    view_l[h][w][i] += 1
+                else:
+                    view_l[h][w][i] = 1
+    
+    view_r = [[{i: 0 for i in range(10)} for _ in range(grid.width)] for _ in range(grid.height)]
+    
+    for w in range(grid.width - 2, -1, -1):
+        for h in range(0, grid.height):
+            for i in range(10):
+                view_r[h][w][i] = view_r[h][w + 1][i]
+                if (grid.data[h][w + 1] < i):
+                    view_r[h][w][i] += 1
+                else:
+                    view_r[h][w][i] = 1
+    
+    return view_l, view_r
+
+def part2(grid: Grid) -> Tuple[int, int, int]:
+    
+    # compute scores by row/column in each direction
+    view_t, view_b = _makeHorizontalCounts(grid)
+    view_l, view_r = _makeVerticalCounts(grid)
+    # scenic scores per tree
+    scores = [[0 for _ in range(grid.width)] for _ in range(grid.height)]
+    
+    # scenic score as sum of score in each direction
+    for h in range(0, grid.height):
+        for w in range(0, grid.width):
+            i = grid.data[h][w]
+            scores[h][w] = prod(v[h][w][i] for v in [view_t, view_b, view_l, view_r])
+    
+    max = 0
+    max_h = 0
+    max_w = 0
+    
+    for h in range(grid.height):
+        for w in range(grid.width):
+            if (max < scores[h][w]):
+                max = scores[h][w]
+                max_h = h
+                max_w = w
+    
+    return max_w, max_h, max, grid.data[max_h][max_w]
 
 def main(args):
     
     grid = read_inputs(args.example)
     visible_trees = part1(grid)
     logging.info(f'Part 1: {visible_trees} trees are visible')
-    part2()
-    logging.info(f'Part 2: ')
+    x, y, score, value = part2(grid)
+    logging.info(f'Part 2: Tree {value} @{x},{y} with score {score}')
 
 if __name__ == '__main__':
     args = setup()
