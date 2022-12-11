@@ -13,11 +13,12 @@ example_input = """
 
 def read_inputs(example=0):
     
-    if (example):
-        data = example_input
-    else:
-        with open('dayN_input', 'r', encoding='utf-8') as f:
-            data = f.read()
+    match (example):
+        case _ if (example):
+            data = example_input
+        case _:
+            with open('dayN_input', 'r', encoding='utf-8') as f:
+                data = f.read()
     
     data = data.splitlines()
     
