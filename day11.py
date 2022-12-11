@@ -6,6 +6,7 @@ import logging
 
 from copy import deepcopy
 from dataclasses import dataclass, field
+from math import prod
 from typing import Dict, List, Optional, Tuple
 
 from lib import setup
@@ -118,12 +119,13 @@ def read_inputs(example=0) -> List[Monkey]:
     
     return monkeys
 
-def part1(monkeys: List[Monkey]) -> int:
+def simulate(monkeys: List[Monkey], relief=3, rounds=20) -> int:
     
     activity : Dict[int, int] = {i: 0 for i in range(len(monkeys))}
+    big_divisor = prod(monkey.test.divisible for monkey in monkeys)
     
-    # 20 rounds total
-    for round in range(20):
+    # <rounds> rounds total
+    for round in range(rounds):
         
         # each monkey gets a turn
         for monkey in monkeys:
@@ -132,18 +134,20 @@ def part1(monkeys: List[Monkey]) -> int:
                 # monkey inspects item
                 item.worry = monkey.operation.execute(item.worry)
                 # monkey lets go of item
-                item.worry //= 3
+                item.worry //= relief
                 # cound activity
                 activity[monkey.ix] += 1
                 # perform test
                 recipient = monkey.test.execute(item.worry)
+                # adapt value to keep worry down
+                item.worry %= big_divisor
                 # throw item
                 monkeys[recipient].items.append(item)
                 monkey.items.remove(item)
         
-        logging.info(f'Round {round}')
-        for monkey in monkeys:
-            logging.info(f'Monkey {monkey.ix}: {", ".join(str(item.worry) for item in monkey.items)}')
+        #logging.info(f'Round {round}')
+        #for monkey in monkeys:
+        #    logging.info(f'Monkey {monkey.ix}: {", ".join(str(item.worry) for item in monkey.items)}')
     
     for ix, value in activity.items():
         logging.info(f'Monkey {ix} inspected items {value} times.')
@@ -151,16 +155,19 @@ def part1(monkeys: List[Monkey]) -> int:
     monkeys_by_activity = list(sorted(activity.items(), key=lambda ix_activity: ix_activity[1]))
     return monkeys_by_activity[-2:]
 
-def part2():
-    pass
+def part1(monkeys: List[Monkey]) -> int:
+    return simulate(monkeys, relief=3, rounds=20)
+
+def part2(monkeys: List[Monkey]) -> int:
+    return simulate(monkeys, relief=1, rounds=10000)
 
 def main(args):
     
     monkeys = read_inputs(args.example)
     monkey_business = part1(deepcopy(monkeys))
     logging.info(f'Part 1: level of monkey business is {monkey_business[0][1] * monkey_business[1][1]} (monkeys {monkey_business[0][0]}, {monkey_business[1][0]})')
-    part2()
-    logging.info(f'Part 2: ')
+    monkey_business = part2(deepcopy(monkeys))
+    logging.info(f'Part 2: level of monkey business is {monkey_business[0][1] * monkey_business[1][1]} (monkeys {monkey_business[0][0]}, {monkey_business[1][0]})')
 
 if __name__ == '__main__':
     args = setup()
