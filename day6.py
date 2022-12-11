@@ -31,30 +31,38 @@ def read_inputs(example=0) -> str:
     data = data.splitlines()
     return data[0]
 
-def part1(transmission: str) -> Optional[int]:
-    """Find Start-of-Packet marker in transmission
-    and output position of payload after marker.
+def findMarker(transmission: str, len_marker: int) -> Optional[int]:
+    """Find n-character marker in transmission
+    and output position after marker.
     """
-
     result = None
 
-    for i in range(0, len(transmission) - 4 + 1):
-        if (len(set(transmission[i:i+4])) == 4):
-            result = i + 4
+    for i in range(0, len(transmission) - len_marker + 1):
+        if (len(set(transmission[i:i+len_marker])) == len_marker):
+            result = i + len_marker
             break
     
     return result
 
-def part2():
-    pass
+def part1(transmission: str) -> Optional[int]:
+    """Find Start-of-Packet marker in transmission
+    and output position of payload after marker.
+    """
+    return findMarker(transmission, len_marker=4)
+
+def part2(transmission: str) -> Optional[int]:
+    """Find Start-of-Message marker in transmission
+    and output position of payload after marker.
+    """
+    return findMarker(transmission, len_marker=14)
 
 def main(args):
     
     transmission = read_inputs(args.example)
     payload_pos = part1(transmission)
     logging.info(f'Part 1: Payload starts at {payload_pos}')
-    part2()
-    logging.info(f'Part 2: ')
+    message_pos = part2(transmission)
+    logging.info(f'Part 2: Message starts at {message_pos}')
 
 if __name__ == '__main__':
     args = setup()
