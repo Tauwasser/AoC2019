@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple
 
 from lib import setup
 
-example_input = """R 4
+example1_input = """R 4
 U 4
 L 3
 D 1
@@ -19,6 +19,16 @@ R 4
 D 1
 L 5
 R 2
+"""
+
+example2_input = """R 5
+U 8
+L 8
+D 3
+R 17
+D 10
+L 25
+U 20
 """
 
 class Direction(StrEnum):
@@ -77,8 +87,10 @@ class Command:
 def read_inputs(example=0) -> Tuple[Rect, List[Command]]:
     
     match (example):
+        case 1:
+            data = example1_input
         case _ if (example):
-            data = example_input
+            data = example2_input
         case _:
             with open('day9_input', 'r', encoding='utf-8') as f:
                 data = f.read()
@@ -110,7 +122,7 @@ def read_inputs(example=0) -> Tuple[Rect, List[Command]]:
     field = Rect(btm_left.x, btm_left.y, top_right.x - btm_left.x +1 , top_right.y - btm_left.y + 1)
     return (field, commands)
 
-def drawField(field: Rect, head: Optional[Point], tail: Optional[Point], visited: List[Point] = []):
+def drawField(field: Rect, head: Optional[Point], tail: Optional[Point], tails: List[Point] = [], visited: List[Point] = []):
     
     diagram = [['.' for _ in range(field.w)] for _ in range(field.h)]
     
@@ -124,6 +136,10 @@ def drawField(field: Rect, head: Optional[Point], tail: Optional[Point], visited
     # draw tail
     if (tail is not None):
         diagram[tail.y-field.y][tail.x-field.x] = 'T'
+    
+    # draw tails
+    for num, tail in reversed(list(enumerate(tails, 1))):
+        diagram[tail.y-field.y][tail.x-field.x] = str(num)
     
     # draw head
     if (head is not None):
@@ -162,16 +178,45 @@ def part1(field: Rect, commands: List[Command]) -> int:
     
     return len(visited)
 
-def part2():
-    pass
+def part2(field: Rect, commands: List[Command]) -> int:
+    
+    head = Point(0, 0)
+    tails = [Point(0, 0) for _ in range(9)]
+    visited = set()
+    
+    #logging.info(f'== Initial State ==')
+    #drawField(field, head, None, tails=tails)
+    
+    for command in commands:
+        
+        #logging.info(f'== {command.dir._value_} {command.steps} ==')
+        
+        for _ in range(command.steps):
+            head.x += command.dir.dx
+            head.y += command.dir.dy
+            
+            for tail, before in zip(tails, [head] + tails):
+                
+                d, v = tail.distance(before)
+                if (d >= 2):
+                    v = v.normalize()
+                    tail.x += v.dx
+                    tail.y += v.dy
+            
+            visited.add((tail.x, tail.y))
+            #drawField(field, head, None, tails=tails)
+    
+    drawField(field, None, None, visited=[Point(x, y) for x, y in visited])
+    
+    return len(visited)
 
 def main(args):
     
     field, commands = read_inputs(args.example)
     num_points = part1(field, commands)
     logging.info(f'Part 1: There were {num_points} unique points visited by Tail')
-    part2()
-    logging.info(f'Part 2: ')
+    num_points = part2(field, commands)
+    logging.info(f'Part 2: There were {num_points} unique points visited by Tail 9')
 
 if __name__ == '__main__':
     args = setup()
