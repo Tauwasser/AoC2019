@@ -104,7 +104,7 @@ def part1(m: ElevationMap, s: Point, e: Point) -> int:
         if (n == e):
             break
         
-        logging.info(f'Explore {n.x}/{n.y} (steps {n.steps} distance {n.distance})')
+        #logging.info(f'Explore {n.x}/{n.y} (steps {n.steps} distance {n.distance})')
         steps = n.steps + 1
         
         # explore neighboring nodes
@@ -130,20 +130,28 @@ def part1(m: ElevationMap, s: Point, e: Point) -> int:
             np = Node(p, steps, p.distance(e), v)
             explore.add(np)
             seen[p] = np
+    else:
+        # return a negative number to signify failure
+        return -1
     
     # return winning node steps
     return n.steps
 
-def part2():
-    pass
+def part2(m: ElevationMap, s: Point, e: Point) -> int:
+    
+    points = [Point(x, y) for x in range(m.width) for y in range(m.height)
+              if m.elevation[y][x] == 0
+              ]
+    logging.info(f'Found {len(points)} possible starting points.')
+    return min(filter(lambda s: s > 0, (part1(m, p, e) for p in points)))
 
 def main(args):
     
     m, s, e = read_inputs(args.example)
     fewest_steps = part1(m, s, e)
     logging.info(f'Part 1: fewest steps {fewest_steps}')
-    part2()
-    logging.info(f'Part 2: ')
+    fewest_steps_scenic = part2(m, s, e)
+    logging.info(f'Part 2: fewest scenic steps {fewest_steps_scenic}')
 
 if __name__ == '__main__':
     args = setup()
