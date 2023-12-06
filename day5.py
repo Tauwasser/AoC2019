@@ -44,16 +44,22 @@ humidity-to-location map:
 56 93 4
 """
 
+@dataclass(eq=True, frozen=True)
+class AlmanacMap:
+    src: int
+    dst: int
+    len: int
+
 @dataclass
 class Almanac:
-    seeds:               list[int]      = field(default_factory=list, repr=False)
-    seed_to_soil:        dict[int, int] = field(default_factory=dict, repr=False)
-    soil_to_fertilizer:  dict[int, int] = field(default_factory=dict, repr=False)
-    fertilizer_to_water: dict[int, int] = field(default_factory=dict, repr=False)
-    water_to_light:      dict[int, int] = field(default_factory=dict, repr=False)
-    light_to_temp:       dict[int, int] = field(default_factory=dict, repr=False)
-    temp_to_humid:       dict[int, int] = field(default_factory=dict, repr=False)
-    humid_to_loc:        dict[int, int] = field(default_factory=dict, repr=False)
+    seeds:               list[int]        = field(default_factory=list, repr=False)
+    seed_to_soil:        list[AlmanacMap] = field(default_factory=list, repr=False)
+    soil_to_fertilizer:  list[AlmanacMap] = field(default_factory=list, repr=False)
+    fertilizer_to_water: list[AlmanacMap] = field(default_factory=list, repr=False)
+    water_to_light:      list[AlmanacMap] = field(default_factory=list, repr=False)
+    light_to_temp:       list[AlmanacMap] = field(default_factory=list, repr=False)
+    temp_to_humid:       list[AlmanacMap] = field(default_factory=list, repr=False)
+    humid_to_loc:        list[AlmanacMap] = field(default_factory=list, repr=False)
 
 def read_inputs(example=0) -> Almanac:
     
@@ -99,9 +105,7 @@ def read_inputs(example=0) -> Almanac:
         
         while (entry := next(idata, '')):
             dst, src, len = (int(v.strip()) for v in entry.split(' '))
-            
-            for l in range(len):
-                field[src + l] = dst + l
+            field.append(AlmanacMap(src, dst, len))
     
     return almanac
 
@@ -110,22 +114,26 @@ def part1(almanac: Almanac) -> list[int]:
     
     locations : list[int] = []
     
+    def _map_index(field, src_ix):
+        _map = next(filter(lambda m: m.src <= src_ix < m.src + m.len, field), AlmanacMap(src_ix, src_ix, 1))
+        return _map.dst + (src_ix - _map.src)
+    
     for seed in almanac.seeds:
         
         # get soil
-        soil = almanac.seed_to_soil.get(seed, seed)
+        soil = _map_index(almanac.seed_to_soil, seed)
         # get fertilizer
-        fertilizer = almanac.soil_to_fertilizer.get(soil, soil)
+        fertilizer = _map_index(almanac.soil_to_fertilizer, soil)
         # get water
-        water = almanac.fertilizer_to_water.get(fertilizer, fertilizer)
+        water = _map_index(almanac.fertilizer_to_water, fertilizer)
         # get light
-        light = almanac.water_to_light.get(water, water)
+        light = _map_index(almanac.water_to_light, water)
         # get temperature
-        temperature = almanac.light_to_temp.get(light, light)
+        temperature = _map_index(almanac.light_to_temp, light)
         # get humidity
-        humidity = almanac.temp_to_humid.get(temperature, temperature)
+        humidity = _map_index(almanac.temp_to_humid, temperature)
         # get location
-        location = almanac.humid_to_loc.get(humidity, humidity)
+        location = _map_index(almanac.humid_to_loc, humidity)
         
         # catch result
         locations.append(location)
