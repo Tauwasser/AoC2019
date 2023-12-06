@@ -150,38 +150,84 @@ def part1(almanac: Almanac) -> list[int]:
     
     return locations
 
-def part2(almanac: Almanac) -> list[int]:
-    """Map seed ranges to locations using almanac"""
+def part2(almanac: Almanac) -> list[tuple[int, int]]:
+    """Map seed ranges to lowest locations using almanac"""
     
-    locations : list[int] = []
+    seed_locations : list[tuple[int, int]] = []
     
-    def _map_index(field, src_ix):
-        _map = next(filter(lambda m: m.src <= src_ix < m.src + m.len, field), AlmanacMap(src_ix, src_ix, 1))
-        return _map.dst + (src_ix - _map.src)
+    fields : tuple[list[AlmanacMap]] = (
+        almanac.seed_to_soil,
+        almanac.soil_to_fertilizer,
+        almanac.fertilizer_to_water,
+        almanac.water_to_light,
+        almanac.light_to_temp,
+        almanac.temp_to_humid,
+        almanac.humid_to_loc,
+    )
+    
+    def _map_overlap(src: AlmanacMap, dst: AlmanacMap) -> bool:
+        """Helper to map dst using src map"""
+        
+        # dst in [src, src + len)
+        if (src.src <= dst.dst < src.src + src.len):
+            return True
+        
+        # dst + len - 1 in [src, src + len)
+        if (src.src <= dst.dst + dst.len - 1 < src.src + src.len):
+            return True
+        
+        return False
     
     for seed_range in almanac.seed_ranges:
         
-        for seed in range(seed_range.beg, seed_range.beg + seed_range.len):
+        slices : list[AlmanacMap] = [AlmanacMap(seed_range.beg, seed_range.beg, seed_range.len)]
+        
+        for field in fields:
             
-            # get soil
-            soil = _map_index(almanac.seed_to_soil, seed)
-            # get fertilizer
-            fertilizer = _map_index(almanac.soil_to_fertilizer, soil)
-            # get water
-            water = _map_index(almanac.fertilizer_to_water, fertilizer)
-            # get light
-            light = _map_index(almanac.water_to_light, water)
-            # get temperature
-            temperature = _map_index(almanac.light_to_temp, light)
-            # get humidity
-            humidity = _map_index(almanac.temp_to_humid, temperature)
-            # get location
-            location = _map_index(almanac.humid_to_loc, humidity)
-            
-            # catch result
-            locations.append(location)
+            tmp_slices : list[AlmanacMap] = []
+            # map ranges
+            for slice in slices:
+                
+                # find overlapping ranges in field
+                overlaps = tuple(sorted(filter(lambda r: _map_overlap(r, slice), field), key=lambda m: m.src))
+                offset = 0
+                
+                for overlap in overlaps:
+                    
+                    # create entry for first part of range
+                    if (overlap.src <= slice.dst):
+                        off = slice.dst + offset - overlap.src
+                        l = min(overlap.len - off, slice.len - offset)
+                        tmp_slices.append(AlmanacMap(slice.src + offset, overlap.dst + off, l))
+                        offset += l
+                        continue
+                        
+                    # create identity map entry for all unmatched dst indices up to first mapped dst entry
+                    if (overlap.src > slice.dst + offset):
+                        l = overlap.src - slice.dst - offset
+                        tmp_slices.append(AlmanacMap(slice.src + offset, slice.dst + offset, l))
+                        offset += l
+                    
+                    # create entry for last part of range
+                    if (overlap.src <= slice.dst + slice.len):
+                        l = min(overlap.len, slice.dst + slice.len - overlap.src)
+                        tmp_slices.append(AlmanacMap(slice.src + offset, overlap.dst, l))
+                        offset += l
+                
+                # create one final slice for [offset, dst + len)
+                if (offset < slice.len):
+                    tmp_slices.append(AlmanacMap(slice.src + offset, slice.dst + offset, slice.len - offset))
+                
+            # replace previous slices with mapped slices
+            slices = tmp_slices
+        
+        # we now have seed => location slices
+        # find slice with lowest location id and invert it
+        min_slice = min(slices, key=lambda slice: slice.dst)
+        # append (min_seed, min_loc)
+        seed_locations.append((min_slice.src, min_slice.dst))
     
-    return locations
+    return seed_locations
 
 def main(args):
     
@@ -189,7 +235,7 @@ def main(args):
     seed_locations = part1(almanac)
     logging.info(f'Part 1: {min(seed_locations)} ({", ".join(str(loc) for loc in seed_locations)})')
     seed_locations = part2(almanac)
-    logging.info(f'Part 2: {min(seed_locations)} ({", ".join(str(loc) for loc in seed_locations)})')
+    logging.info(f'Part 2: {min(sl[1] for sl in seed_locations)} ({", ".join(str(loc) for loc in seed_locations)})')
 
 if __name__ == '__main__':
     args = setup()
