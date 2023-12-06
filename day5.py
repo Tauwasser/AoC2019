@@ -50,9 +50,15 @@ class AlmanacMap:
     dst: int
     len: int
 
+@dataclass(eq=True, frozen=True)
+class AlmanacRange:
+    beg: int
+    len: int
+
 @dataclass
 class Almanac:
     seeds:               list[int]        = field(default_factory=list, repr=False)
+    seed_ranges:          list[AlmanacRange] = field(default_factory=list, repr=False)
     seed_to_soil:        list[AlmanacMap] = field(default_factory=list, repr=False)
     soil_to_fertilizer:  list[AlmanacMap] = field(default_factory=list, repr=False)
     fertilizer_to_water: list[AlmanacMap] = field(default_factory=list, repr=False)
@@ -90,7 +96,11 @@ def read_inputs(example=0) -> Almanac:
         
         if (line.startswith('seeds: ')):
             _, seeds = line.split(': ')
+            # map original seeds
             almanac.seeds = [int(seed.strip()) for seed in seeds.split(' ') if seed]
+            # map seed range
+            for beg, len in zip(almanac.seeds[::2], almanac.seeds[1::2]):
+                almanac.seed_ranges.append(AlmanacRange(beg, len))
             # consume one more line
             next(idata)
             continue
@@ -140,16 +150,46 @@ def part1(almanac: Almanac) -> list[int]:
     
     return locations
 
-def part2():
-    pass
+def part2(almanac: Almanac) -> list[int]:
+    """Map seed ranges to locations using almanac"""
+    
+    locations : list[int] = []
+    
+    def _map_index(field, src_ix):
+        _map = next(filter(lambda m: m.src <= src_ix < m.src + m.len, field), AlmanacMap(src_ix, src_ix, 1))
+        return _map.dst + (src_ix - _map.src)
+    
+    for seed_range in almanac.seed_ranges:
+        
+        for seed in range(seed_range.beg, seed_range.beg + seed_range.len):
+            
+            # get soil
+            soil = _map_index(almanac.seed_to_soil, seed)
+            # get fertilizer
+            fertilizer = _map_index(almanac.soil_to_fertilizer, soil)
+            # get water
+            water = _map_index(almanac.fertilizer_to_water, fertilizer)
+            # get light
+            light = _map_index(almanac.water_to_light, water)
+            # get temperature
+            temperature = _map_index(almanac.light_to_temp, light)
+            # get humidity
+            humidity = _map_index(almanac.temp_to_humid, temperature)
+            # get location
+            location = _map_index(almanac.humid_to_loc, humidity)
+            
+            # catch result
+            locations.append(location)
+    
+    return locations
 
 def main(args):
     
     almanac = read_inputs(args.example)
     seed_locations = part1(almanac)
     logging.info(f'Part 1: {min(seed_locations)} ({", ".join(str(loc) for loc in seed_locations)})')
-    part2()
-    logging.info(f'Part 2: ')
+    seed_locations = part2(almanac)
+    logging.info(f'Part 2: {min(seed_locations)} ({", ".join(str(loc) for loc in seed_locations)})')
 
 if __name__ == '__main__':
     args = setup()
