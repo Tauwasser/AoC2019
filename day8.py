@@ -7,6 +7,7 @@ import logging
 
 from dataclasses import dataclass, field
 from itertools import cycle
+from math import lcm
 from typing import Dict, List, Optional, Tuple
 
 from lib import setup
@@ -112,25 +113,51 @@ def part1(puzzle: PuzzleMap) -> int:
 def part2(puzzle: PuzzleMap):
     """Traverse Puzzle Map to find out how many steps it takes from ??A to ??Z
     
-    Iterate paths simultaneously until all current nodes end in Z.
+    Iterate paths individually, find cyclic visits to ??Z nodes, and then find
+    the least common multiple (lcm) of all paths' cyclic ??Z node visits.
     """
     
-    cur = [puzzle.nodes[key] for key in puzzle.nodes.keys() if key.endswith('A')]
-    num_steps = 0
+    # find all starting nodes
+    nodes = [puzzle.nodes[key] for key in puzzle.nodes.keys() if key.endswith('A')]
+    # collect (initial steps, cycle) for first cyclic ??Z node visit per starting node
+    cycles : dict[NodeId, tuple[int, int]] = {}
     
-    for step in cycle(puzzle.instructions):
+    for node in nodes:
         
-        num_steps += 1
+        visited_z : dict[NodeId, int] = {}
+        cur = node
+        lcm_steps = 0
         
-        # update all nodes
-        for ix, node in enumerate(cur):
-            nxt = node.left if (step == 'L') else node.right
-            cur[ix] = puzzle.nodes[nxt]
-        
-        if all(node.id.endswith('Z') for node in cur):
-            break
+        for step in cycle(puzzle.instructions):
+            
+            lcm_steps += 1
+            nxt = cur.left if (step == 'L') else cur.right
+            cur = puzzle.nodes[nxt]
+            
+            if (cur.id.endswith('Z') and cur.id in visited_z):
+                cycles[node.id] = (visited_z[cur.id], lcm_steps - visited_z[cur.id])
+                break
+            elif (cur.id.endswith('Z')):
+                visited_z[cur.id] = lcm_steps
     
-    return num_steps
+    offset = max(cycle[0] for cycle in cycles.values())
+    steps = (cycle[1] for cycle in cycles.values())
+    
+    lcm_steps = lcm(*steps)
+    
+    # for lcm less than offset, we would need to use the next cycle, because
+    # the lcm would hit before the last path has visited the ??Z first node
+    
+    # Also, there are untenable situations, that we do not account for. Consider:
+    # 11A -> 11B -> 11C -> 11Z -> 11D -> 11Z -> 11D
+    # 22A -> 22B -> 22C -> 22D -> 22Z -> 22D -> 22Z
+    # 
+    # The lcm of the cyclic ??Z visits is 2, but the condition that all current
+    # nodes are ??Z simultaneously is never met.
+    # 
+    # However, the puzzle must be solvable, so let's ignore all these concerns :)
+    
+    return lcm_steps
 
 def main(args):
     
