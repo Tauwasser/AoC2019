@@ -72,7 +72,7 @@ def read_inputs(example=0) -> PuzzleMap:
     
     # line 0 is instructions left/right (L/R)
     puzzle.instructions = data[0]
-    pattern = re.compile(r'([A-Z]{3}) = \(([A-Z]{3}), ([A-Z]{3})\)')
+    pattern = re.compile(r'([A-Z0-9]{3}) = \(([A-Z0-9]{3}), ([A-Z0-9]{3})\)')
     
     for line in data[2:]:
         
@@ -88,11 +88,15 @@ def read_inputs(example=0) -> PuzzleMap:
 def part1(puzzle: PuzzleMap) -> int:
     """Traverse Puzzle Map to find out how many steps it takes from AAA to ZZZ"""
     
-    AAA = puzzle.nodes['AAA']
-    ZZZ = puzzle.nodes['ZZZ']
+    AAA = puzzle.nodes.get('AAA', None)
+    ZZZ = puzzle.nodes.get('ZZZ', None)
     
     cur = AAA
     num_steps = 0
+    
+    if (AAA is None or ZZZ is None):
+        logging.error(f'Could not find AAA/ZZZ Nodes...')
+        return num_steps
     
     for step in cycle(puzzle.instructions):
         
@@ -105,16 +109,36 @@ def part1(puzzle: PuzzleMap) -> int:
         
     return num_steps
 
-def part2():
-    pass
+def part2(puzzle: PuzzleMap):
+    """Traverse Puzzle Map to find out how many steps it takes from ??A to ??Z
+    
+    Iterate paths simultaneously until all current nodes end in Z.
+    """
+    
+    cur = [puzzle.nodes[key] for key in puzzle.nodes.keys() if key.endswith('A')]
+    num_steps = 0
+    
+    for step in cycle(puzzle.instructions):
+        
+        num_steps += 1
+        
+        # update all nodes
+        for ix, node in enumerate(cur):
+            nxt = node.left if (step == 'L') else node.right
+            cur[ix] = puzzle.nodes[nxt]
+        
+        if all(node.id.endswith('Z') for node in cur):
+            break
+    
+    return num_steps
 
 def main(args):
     
     puzzle = read_inputs(args.example)
     num_steps = part1(puzzle)
     logging.info(f'Part 1: {num_steps} from AAA to ZZZ')
-    part2()
-    logging.info(f'Part 2: ')
+    num_steps = part2(puzzle)
+    logging.info(f'Part 2: {num_steps} from ??A to ??Z simultaneously')
 
 if __name__ == '__main__':
     args = setup()
