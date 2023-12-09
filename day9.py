@@ -56,16 +56,35 @@ def part1(readings: list[Reading]) -> list[int]:
     
     return predictions
 
-def part2():
-    pass
+def part2(readings: list[Reading]) -> list[int]:
+    """Analyze OASIS readings and generate hindcasts
+    
+    Generate predictions about the past"""
+    
+    hindcasts : list[int] = []
+    
+    def _predict(values: tuple[int]) -> int:
+        
+        if (all(v == values[0] for v in values)):
+            return values[0]
+        
+        # calculate deltas
+        deltas = tuple(map(lambda t0, t1: t1 - t0, values, values[1:]))
+        prev_delta = _predict(deltas)
+        return values[0] - prev_delta
+    
+    for reading in readings:
+        hindcasts.append(_predict(reading.values))
+    
+    return hindcasts
 
 def main(args):
     
     readings = read_inputs(args.example)
     predictions = part1(readings)
     logging.info(f'Part 1: {sum(predictions)} ({" ".join(str(v) for v in predictions)})')
-    part2()
-    logging.info(f'Part 2: ')
+    hindcasts = part2(readings)
+    logging.info(f'Part 2: {sum(hindcasts)} ({" ".join(str(v) for v in hindcasts)})')
 
 if __name__ == '__main__':
     args = setup()
