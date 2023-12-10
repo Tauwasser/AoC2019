@@ -23,6 +23,17 @@ SJLL7
 LJ.LJ
 """
 
+example3_input = """...........
+.S-------7.
+.|F-----7|.
+.||.....||.
+.||.....||.
+.|L-7.F-J|.
+.|..|.|..|.
+.L--J.L--J.
+...........
+"""
+
 @dataclass(eq=True, frozen=True)
 class Position:
     x: int
@@ -38,11 +49,25 @@ class Position:
             return Position(self.x + other[0], self.y + other[1])
         return NotImplemented
     
-    def __radd__(self, other):
+    def __sub__(self, other):
         if self.__class__ is other.__class__:
-            return Position(self.x + other.x, self.y + other.y)
+            return Position(self.x - other.x, self.y - other.y)
         elif (other.__class__ is tuple and len(other) == 2):
-            return Position(self.x + other[0], self.y + other[1])
+            return Position(self.x - other[0], self.y - other[1])
+        return NotImplemented
+    
+    def __mul__(self, other):
+        if (other.__class__ is tuple and len(other) == 2):
+            return Position(self.x * other[0], self.y * other[1])
+        elif (other.__class__ is int):
+            return Position(self.x * other, self.y * other)
+        return NotImplemented
+    
+    def __floordiv__(self, other):
+        if (other.__class__ is tuple and len(other) == 2):
+            return Position(self.x // other[0], self.y // other[1])
+        elif (other.__class__ is int):
+            return Position(self.x // other, self.y // other)
         return NotImplemented
 
 @dataclass
@@ -96,8 +121,9 @@ class PipeNetwork:
     width: int = 0
     height: int = 0
     pipes: dict[Position, str] = field(default_factory=dict, repr=False)
+    inside: set[Position] = field(default_factory=set, repr=False)
     
-    def to_string(self, print_start: bool = True, print_position: Position = Position(-1, -1)) -> str:
+    def to_string(self, print_start: bool = True, print_position: Position = Position(-1, -1), outside: set[Position] = {}, filename: str = None) -> str:
         """Print Pipe Network to a String"""
         
         result = ''
@@ -109,13 +135,18 @@ class PipeNetwork:
                     result += 'S'
                 elif (print_position == position):
                     result += 'X'
+                elif (position in self.inside):
+                    result += 'I'
+                elif (position in outside):
+                    result += 'O'
                 else:
                     result += self.pipes.get(position, '.')
             result += '\n'
         
         # write result to file for debug
-        with open('day10_network', 'w', encoding='utf-8') as f:
-            f.write(result)
+        if (filename is not None):
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(result)
         
         return result
     
@@ -198,6 +229,8 @@ def read_inputs(example=0) -> PipeNetwork:
             data = example1_input
         case 2 if (example):
             data = example2_input
+        case 3 if (example):
+            data = example3_input
         case _:
             with open('day10_input', 'r', encoding='utf-8') as f:
                 data = f.read()
@@ -240,21 +273,21 @@ def read_inputs(example=0) -> PipeNetwork:
     network.width = x + 1
     network.height = y + 1
     
-    logging.info(f'Parsed Network:\n{network.to_string()}')
+    logging.info(f'Parsed Network:\n{network.to_string(filename="day10_network")}')
     
     # cull unconnected loops
     network.cull_unconnected()
     
-    logging.info(f'Parsed Network:\n{network.to_string()}')
+    logging.info(f'Parsed Network:\n{network.to_string(filename="day10_network")}')
     
     # find type of start node
     network.determine_start_node()
     
-    logging.info(f'Parsed Network:\n{network.to_string(print_start=False)}')
+    logging.info(f'Parsed Network:\n{network.to_string(filename="day10_network", print_start=False)}')
     
     return network
 
-def part1(network: PipeNetwork) -> tuple[int, Position]:
+def part1(network: PipeNetwork) -> tuple[int, list[Position]]:
     "Determine Pipe Length and half-way Position"
     
     length = 1
@@ -287,18 +320,91 @@ def part1(network: PipeNetwork) -> tuple[int, Position]:
         # store position
         pipes.append(cur_pos)
     
-    return length, pipes[length // 2]
+    return length, pipes
 
-def part2():
-    pass
+def part2(network: PipeNetwork, pipes: list[Position]) -> int:
+    """Find Inside Area of Pipe Network"""
+    
+    # delete all pipes that are not part of the network
+    network.pipes = {position: network.pipes[position] for position in pipes}
+    logging.info(f'Reduced Network:\n{network.to_string(filename="day10_network", print_start=False)}')
+    
+    # create a temporary network at twice the resolution
+    tmp_network = PipeNetwork(network.start * 2, network.width * 2 + 2, network.height * 2 + 2)
+    offset = (1, 1)
+    
+    for pos, pipe in network.pipes.items():
+        tmp_network.pipes[pos * 2 + offset] = pipe
+        
+        if (pipe in ('|', 'F', '7')):
+            tmp_network.pipes[pos * 2 + offset + (0, +1)] = '|'
+        if (pipe in ('-', 'F', 'L')):
+            tmp_network.pipes[pos * 2 + offset + (+1, 0)] = '-'
+    
+    logging.info(f'Widened Network:\n{tmp_network.to_string(filename="day10_network_wide", print_start=False)}')
+    nxt_outside: set[Position] = set()
+    
+    # add layer of OUTSIDE around network
+    for x in range(tmp_network.width):
+        nxt_outside.add(Position(x, 0))
+        nxt_outside.add(Position(x, tmp_network.height - 1))
+    for y in range(1, tmp_network.height - 1):
+        nxt_outside.add(Position(0, y))
+        nxt_outside.add(Position(tmp_network.width - 1, y))
+    
+    logging.info(f'Outside Prep Network:\n{tmp_network.to_string(filename="day10_network_wide", outside=nxt_outside, print_start=False)}')
+    
+    outside = set(o for o in nxt_outside)
+    
+    while nxt_outside:
+        base = nxt_outside.pop()
+        for delta in ((0, +1), (0, -1), (+1, 0), (-1, 0)):
+            # calc position
+            pos = base + delta
+            
+            # make sure position is inside network
+            if not(0 <= pos.x < tmp_network.width):
+                continue
+            if not(0 <= pos.y < tmp_network.height):
+                continue
+            
+            # check pipes
+            pipe = tmp_network.pipes.get(pos, None)
+            # pipes cannot be outside
+            if (pipe is not None):
+                continue
+            # outside is already outside
+            if (pos in outside):
+                continue
+            # add to lists of all outside positions and list of outside positions to check
+            outside.add(pos)
+            nxt_outside.add(pos)
+    
+    logging.info(f'Outside Fill Network:\n{tmp_network.to_string(filename="day10_network_wide", outside=outside, print_start=False)}')
+    
+    # determine inside from non-pipe/non-outside areas
+    for y in range(1, tmp_network.height - 1, 2):
+        for x in range(1, tmp_network.width - 1, 2):
+            pos = Position(x, y)
+            pipe = tmp_network.pipes.get(pos, None)
+            # pipes cannot be inside
+            if (pipe is not None):
+                continue
+            # outside cannot be inside
+            if (pos in outside):
+                continue
+            network.inside.add((pos - offset) // 2)
+    
+    logging.info(f'Inside Network:\n{network.to_string(filename="day10_network", print_start=False)}')
+    return len(network.inside)
 
 def main(args):
     
     network = read_inputs(args.example)
-    length, pos = part1(network)
-    logging.info(f'Part 1: Length {length} (Opposite at {pos}; length {length // 2})')
-    part2()
-    logging.info(f'Part 2: ')
+    length, pipes = part1(network)
+    logging.info(f'Part 1: Length {length} (Opposite at {pipes[length // 2]}; length {length // 2})')
+    inside = part2(network, pipes)
+    logging.info(f'Part 2: Inside {inside}')
 
 if __name__ == '__main__':
     args = setup()
