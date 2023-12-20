@@ -60,7 +60,7 @@ def read_inputs(example=0) -> Universe:
     
     return universe
 
-def part1(universe: Universe) -> int:
+def part1(universe: Universe, scale: int=2) -> int:
     
     # find x, y values of galaxies
     xs = set(galaxy.x for galaxy in universe.galaxies)
@@ -72,8 +72,8 @@ def part1(universe: Universe) -> int:
     logging.info(f'Expanded Columns: {", ".join(str(x) for x in sorted(xexp))}')
     
     # create short-hand for x/y deltas
-    xdelta = {x: dx for x, dx in zip(sorted(xexp, reverse=True), range(len(xexp), 0, -1))}
-    ydelta = {y: dy for y, dy in zip(sorted(yexp, reverse=True), range(len(yexp), 0, -1))}
+    xdelta = {x: (dx * (scale -1)) for x, dx in zip(sorted(xexp, reverse=True), range(len(xexp), 0, -1))}
+    ydelta = {y: (dy * (scale -1)) for y, dy in zip(sorted(yexp, reverse=True), range(len(yexp), 0, -1))}
     
     # create expanded universe
     expanded = Universe(width=universe.width + len(xexp), height=universe.height + len(yexp))
@@ -88,16 +88,13 @@ def part1(universe: Universe) -> int:
     
     return sum(distances)
 
-def part2():
-    pass
-
 def main(args):
     
     universe = read_inputs(args.example)
     distance = part1(universe)
-    logging.info(f'Part 1: sum of distances: {distance}')
-    part2()
-    logging.info(f'Part 2: ')
+    logging.info(f'Part 1: sum of distances at scale 1: {distance}')
+    distance = part1(universe, scale=1_000_000)
+    logging.info(f'Part 2: sum of distances at scale 1M: {distance}')
 
 if __name__ == '__main__':
     args = setup()
