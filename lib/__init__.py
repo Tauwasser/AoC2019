@@ -41,8 +41,8 @@ def setup(install_arguments: Callable[[argparse.ArgumentParser], None] = None) -
     # Parse arguments
     args = parser.parse_args()
 
-    if (sys.version_info < (3, 8)):
-        logging.fatal(f'Python version {".".join(sys.version_info)} is less than minimum required version 3.8.')
+    if (sys.version_info < (3, 12)):
+        logging.fatal(f'Python version {".".join(str(v) for v in sys.version_info)} is less than minimum required version 3.12.')
         sys.exit(-1)
     
     # Set User Loglevel
