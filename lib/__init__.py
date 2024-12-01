@@ -26,17 +26,14 @@ def setup(install_arguments: Callable[[argparse.ArgumentParser], None] = None) -
     h.setFormatter(MultiLineFormatter(fmt='[%(asctime)s][%(levelname)-8s] %(message)s', datefmt='%d %b %Y %H:%M:%S'))
     l.addHandler(h)
     l.setLevel(logging.INFO)
-
-    logLevelMap = {
-        'debug':   logging.DEBUG,
-        'info':    logging.INFO,
-        'warning': logging.WARNING,
-        'error':   logging.ERROR,
-        }
+    
+    loglevel_def = 'INFO'
+    loglevel_choices = tuple(lvl for lvl in logging.getLevelNamesMapping().keys() if lvl not in ('WARN', 'NOTSET'))
+    loglevel_usage = (f"'{lvl}'" + ('' if (lvl != loglevel_def) else ' (default)') for lvl in loglevel_choices)
     
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Advent of Code.', formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('--loglevel', help='Loglevel, one of \'DEBUG\', \'INFO\' (default), \'WARNING\', \'ERROR\'.', type=str, default='INFO')
+    parser.add_argument('--loglevel', help=f'Log level, one of {", ".join(loglevel_usage)}.', choices=loglevel_choices, default=loglevel_def)
     parser.add_argument('--example', help='Use example data.', type=int, choices=range(1,10+1), default=0)
     if (install_arguments is not None):
         install_arguments(parser)
@@ -49,10 +46,10 @@ def setup(install_arguments: Callable[[argparse.ArgumentParser], None] = None) -
         sys.exit(-1)
     
     # Set User Loglevel
-    logLevel = logLevelMap.get(args.loglevel.lower(), None)
-    if (logLevel is None):
-        logging.error('Invalid loglevel \'{0:s}\' passed. Exiting...'.format(args.loglevel))
+    try:
+        l.setLevel(args.loglevel)
+    except Exception as e:
+        logging.error(f'Invalid loglevel {args.loglevel}:\n{e!s}')
         sys.exit(-1)
     
-    l.setLevel(logLevel)
     return args
