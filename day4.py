@@ -40,6 +40,8 @@ class MatchDirection(StrEnum):
     DIAG_DOWN_REV = 'DDR',
     DIAG_UP_FWD   = 'DUF',
     DIAG_UP_REV   = 'DUR',
+    HOR_VERT      = 'HV'
+    DIAGONAL      = 'D'
 
 
 @dataclass
@@ -68,7 +70,7 @@ def read_inputs(example=0) -> Puzzle:
     data = data.splitlines()
     return Puzzle(len(data), len(data[0]), data)
 
-def find_matches(puzzle: Puzzle, params: MatchParams, word: str) -> list[Match]:
+def find_matches(puzzle: Puzzle, params: MatchParams, word: str, adjust: bool=False) -> list[Match]:
     
     def _getDx():
         
@@ -84,6 +86,9 @@ def find_matches(puzzle: Puzzle, params: MatchParams, word: str) -> list[Match]:
             yield dy
             dy += params.dy
     
+    # chars to adjust match position by
+    num_adjust = (len(word) // 2) if (adjust) else 0
+    
     # prepare word as tuple of characters + None
     word = tuple(c for c in word) + (None,)
     
@@ -97,7 +102,7 @@ def find_matches(puzzle: Puzzle, params: MatchParams, word: str) -> list[Match]:
                 
                 # we found a match
                 if (c is None):
-                    results.append(Match(x, y, params.kind))
+                    results.append(Match(x + num_adjust * params.dx, y + num_adjust * params.dy, params.kind))
                 
                 # make sure Y in bounds
                 if not(0 <= y+dy < puzzle.height):
@@ -135,16 +140,48 @@ def part1(puzzle: Puzzle, word: str='XMAS') -> tuple[Match]:
     # join all matches
     return (*hf_matches, *hr_matches, *vd_matches, *vu_matches, *ddf_matches, *ddr_matches, *duf_matches, *dur_matches)
 
-def part2(puzzle: Puzzle):
-    pass
+def part2(puzzle: Puzzle, word: str='MAS') -> tuple[Match]:
+    
+     # find all horizontal forward matches
+    hf_matches = find_matches(puzzle, MatchParams(+1,  0, MatchDirection.HOR_FWD), word, adjust=True)
+    # find all horizontal reverse matches
+    hr_matches = find_matches(puzzle, MatchParams(-1,  0, MatchDirection.HOR_REV), word, adjust=True)
+    # find all vertical down matches
+    vd_matches = find_matches(puzzle, MatchParams( 0, +1, MatchDirection.VERT_DOWN), word, adjust=True)
+    # find all vertical up matches
+    vu_matches = find_matches(puzzle, MatchParams( 0, -1, MatchDirection.VERT_UP), word, adjust=True)
+    
+    # keep only horizontal matches whose positions match vertical matches
+    h_matches = (*hf_matches, *hr_matches)
+    v_matches = (*vd_matches, *vu_matches)
+    
+    hv_matches = tuple(Match(h.x, h.y, MatchDirection.HOR_VERT) for h in h_matches if any(h.x == v.x and h.y == v.y for v in v_matches))
+    # apparently only diagonal matches count
+    hv_matches = ()
+    
+    # find all diagonal down forward matches
+    ddf_matches = find_matches(puzzle, MatchParams(+1, +1, MatchDirection.DIAG_DOWN_FWD), word, adjust=True)
+    # find all diagonal down reverse matches
+    ddr_matches = find_matches(puzzle, MatchParams(-1, -1, MatchDirection.DIAG_DOWN_REV), word, adjust=True)
+    # find all diagonal up forward matches
+    duf_matches = find_matches(puzzle, MatchParams(+1, -1, MatchDirection.DIAG_UP_FWD), word, adjust=True)
+    # find all diagonal up reverse matches
+    dur_matches = find_matches(puzzle, MatchParams(-1, +1, MatchDirection.DIAG_UP_REV), word, adjust=True)
+    
+    # keep only diagonal down matches whose positions match diagonal up matches
+    dd_matches = (*ddf_matches, *ddr_matches)
+    du_matches = (*duf_matches, *dur_matches)
+    
+    d_matches = tuple(Match(dd.x, dd.y, MatchDirection.DIAGONAL) for dd in dd_matches if any(dd.x == du.x and dd.y == du.y for du in du_matches))
+    return (*hv_matches, *d_matches)
 
 def main(args):
     
     puzzle = read_inputs(args.example)
     matches = part1(puzzle)
     logging.info(f'Part 1: {len(matches)}')
-    part2(puzzle)
-    logging.info(f'Part 2: ')
+    matches = part2(puzzle)
+    logging.info(f'Part 2: {len(matches)}')
 
 if __name__ == '__main__':
     args = setup()
