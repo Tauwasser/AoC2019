@@ -4,6 +4,8 @@
 import sys
 import logging
 
+from dataclasses import dataclass, field
+
 from lib import setup
 
 example_input = """
