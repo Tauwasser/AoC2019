@@ -4,8 +4,6 @@
 import sys
 import logging
 
-from typing import Dict, List, Optional, Tuple
-
 from lib import setup
 
 example_input = """
