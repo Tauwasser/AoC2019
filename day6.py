@@ -3,6 +3,7 @@
 
 import sys
 import logging
+import re
 
 from dataclasses import dataclass, field
 
@@ -131,28 +132,32 @@ def would_enter_loop(puzzle: Puzzle, guard: Guard, path: dict[tuple[int, int], t
     
     result = False
     
-    # check only next 256 steps
-    for _ in range(256):
+    for _ in range(8192):
         if not(0 <= guard.x < puzzle.width):
             break
         if not(0 <= guard.y < puzzle.height):
             break
         
-        # check if we visited this location with same direction once before
-        # because this means we enter a loop
-        heading = path.get((guard.x, guard.y), (0, 0))
-        if (heading == (guard.dx, guard.dy)):
+        # check if we arrived in existing path
+        direction = path.get((guard.x, guard.y), (0, 0))
+        if (direction[0] == guard.dx and direction[1] == guard.dy):
             result = True
             break
         
-        # turn if obstruction present
         pos = (guard.x + guard.dx, guard.y + guard.dy)
-        if any(pos[0] == obj.x and pos[1] == obj.y for obj in puzzle.obstructions):
+        
+        obstruction = puzzle.obstructions.get(pos, None)
+        if (obstruction is not None):
+            # turn if obstruction present
             guard.turn()
         else:
             # take a step
             guard.x = pos[0]
             guard.y = pos[1]
+    else:
+        # assume if it took that many steps, that we entered
+        # a loop that we just haven't stepped into before
+        result = True
     
     return result
 
@@ -174,49 +179,29 @@ def part2(puzzle: Puzzle) -> list[Obstruction]:
             break
         if not(0 <= guard.y < puzzle.height):
             break
+        
         # include current guard position
         path[(guard.x, guard.y)] = (guard.dx, guard.dy)
         
         # turn if obstruction present
         pos = (guard.x + guard.dx, guard.y + guard.dy)
-        if any(pos[0] == obj.x and pos[1] == obj.y for obj in puzzle.obstructions):
+        obstruction = puzzle.obstructions.get(pos, None)
+        if (obstruction is not None):
             guard.turn()
         else:
-            # check if obstruction would cause loop
-            obstruction = Obstruction(pos[0], pos[1])
-            if would_enter_loop(puzzle, guard, path):
-                result.append(obstruction)
+            # cannot place obstacle where we already went
+            visited = path.get(pos, None)
+            if (visited is None and not (pos[0] == puzzle.guard.x and pos[1] == puzzle.guard.y)):
+                # check if obstruction would cause loop
+                obstruction = Obstruction(pos[0], pos[1])
+                puzzle.obstructions[pos] = obstruction
+                if would_enter_loop(puzzle, guard, path):
+                    result.append(obstruction)
+                # remove new obstruction
+                del puzzle.obstructions[pos]
             # take a step
             guard.x = pos[0]
             guard.y = pos[1]
-    
-    with open('day6_debug', 'w', encoding='utf-8') as f:
-        for y in range(puzzle.height):
-            for x in range(puzzle.width):
-                pos = (x, y)
-                obstruction = next(filter(lambda obj: obj.x == pos[0] and obj.y == pos[1], puzzle.obstructions), None)
-                #new_obstruction = next(filter(lambda obj: obj.x == pos[0] and obj.y == pos[1], result), None)
-                new_obstruction = None
-                if (obstruction is not None):
-                    f.write('#')
-                elif (new_obstruction is not None):
-                    f.write('O')
-                elif(puzzle.guard.x == pos[0] and puzzle.guard.y == pos[1]):
-                    f.write('^')
-                else:
-                    match path.get(pos, (0, 0)):
-                        case (0, 0):
-                            f.write('.')
-                        case (1, 0):
-                            f.write('-')
-                        case (0, 1):
-                            f.write('|')
-                        case (-1, 0):
-                            f.write('-')
-                        case (0, -1):
-                            f.write('|')
-                    
-            f.write('\n')
     
     return result
 
@@ -226,8 +211,6 @@ def main(args):
     steps = part1(puzzle)
     logging.info(f'Part 1: {len(steps)}')
     obstructions = part2(puzzle)
-    # 1843 too low
-    # 2088 too high
     logging.info(f'Part 2: {len(obstructions)}')
 
 if __name__ == '__main__':
